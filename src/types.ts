@@ -1,0 +1,76 @@
+import type { CSSProperties, ReactNode } from 'react';
+
+export type Key = string | number;
+
+export type TabItem<T> = T;
+
+export type TabDirection = 'bottom' | 'left' | 'right' | 'top';
+
+export type TabFit = 'container' | 'content';
+
+export type TabBarItemRenderMeta = {
+  onClick: () => void;
+  active: boolean;
+  index: number;
+};
+
+export type TabBarRenderItem<T> = {
+  tab: TabItem<T>;
+  key: Key;
+  index: number;
+  active: boolean;
+  onClick: () => void;
+};
+
+export type TabBarRenderMeta<T> = {
+  items: TabBarRenderItem<T>[];
+  activeIndex: number;
+  direction: TabDirection;
+  fit: TabFit;
+};
+
+export type TabsBaseProps<T> = {
+  tabs: TabItem<T>[];
+  keyExtractor: (tab: TabItem<T>) => Key;
+  TabPanelRenderer: (tab: TabItem<T>) => ReactNode;
+  onSwipe?: () => void;
+  onChange?: (nextIndex: number, prevIndex: number) => undefined | boolean;
+  onAfterChange?: (activeIndex: number) => void;
+  defaultIndex?: number;
+  activeIndex?: number;
+  swipable?: boolean;
+  fit?: TabFit;
+  direction?: TabDirection;
+  lazyLoadDistance?: number;
+  duration?: number;
+};
+
+export type TabsWithDefaultBarProps<T> = {
+  TabBarItemRenderer: (tab: TabItem<T>, meta: TabBarItemRenderMeta) => ReactNode;
+  TabBarClassName?: string;
+  TabBarStyle?: CSSProperties;
+  TabBarRenderer?: never;
+};
+
+export type TabsWithCustomBarProps<T> = {
+  TabBarRenderer: (meta: TabBarRenderMeta<T>) => ReactNode;
+  TabBarItemRenderer?: never;
+  TabBarClassName?: never;
+  TabBarStyle?: never;
+};
+
+export type TabsProps<T> = TabsBaseProps<T> &
+  (TabsWithDefaultBarProps<T> | TabsWithCustomBarProps<T>);
+
+export type ReactAppTabsContextType = {
+  layer: number;
+  activeIndex: number;
+  getConfig: () => TabItem<any> | undefined;
+  getPrevLayer: () => ReactAppTabsContextType | undefined;
+};
+
+export type InternalTabsContextType = ReactAppTabsContextType & {
+  requestSwipe: (step: -1 | 1) => boolean;
+  previewSwipe: (dx: number) => 'self' | 'parent' | 'none';
+  clearPreview: () => void;
+};
