@@ -1,7 +1,5 @@
 .root {
   display: flex;
-  width: 100%;
-  height: 100%;
   min-width: 0;
   min-height: 0;
 }
@@ -11,20 +9,15 @@
 }
 
 .panelContainer {
-  flex: 1;
-  min-width: 0;
-  min-height: 0;
   overflow: hidden;
   position: relative;
 }
 
 .panelTrack {
   display: flex;
-  height: 100%;
   will-change: transform;
 }
 
 .panelItem {
-  height: 100%;
   overflow: hidden;
 }

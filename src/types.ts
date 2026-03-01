@@ -63,6 +63,11 @@ export type TabsWithCustomBarProps<T> = {
 export type TabsProps<T> = TabsBaseProps<T> &
   (TabsWithDefaultBarProps<T> | TabsWithCustomBarProps<T>);
 
+export type TabsRef = {
+  getActiveIndex: () => number;
+  setActiveIndex: (nextIndex: number) => void;
+};
+
 export type ReactAppTabsContextType = {
   layer: number;
   activeIndex: number;

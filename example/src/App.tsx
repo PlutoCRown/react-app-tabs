@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { TabBarItemRenderMeta, TabBarRenderMeta, TabInnerScroll, Tabs } from '../../src';
 import styles from './index.module.css';
 
@@ -35,10 +35,15 @@ function randomTabs(): ColorTab[] {
   return items;
 }
 
-function defaultTabLabel(tab: ColorTab, meta: TabBarItemRenderMeta) {
+function defaultTabLabel(
+  tab: ColorTab,
+  meta: TabBarItemRenderMeta,
+  ref?: React.Ref<HTMLButtonElement>,
+) {
   const { active, onClick } = meta;
   return (
     <button
+      ref={ref}
       type="button"
       onClick={onClick}
       className={styles.defaultTabButton}
@@ -52,43 +57,30 @@ function defaultTabLabel(tab: ColorTab, meta: TabBarItemRenderMeta) {
   );
 }
 
-function secondLevelTabBar(meta: TabBarRenderMeta<ColorTab>) {
-  return (
-    <div className={styles.secondLevelCustomBar}>
-      <TabInnerScroll
-        __test_name="Bar_2"
-        direction="horizontal"
-        className={styles.secondLevelItemsScroller}
-      >
-        {meta.items.map((item) => (
-          <React.Fragment key={item.key}>
-            {defaultTabLabel(item.tab, {
-              onClick: item.onClick,
-              active: item.active,
-              index: item.index,
-            })}
-          </React.Fragment>
-        ))}
-      </TabInnerScroll>
-      <h1 className={styles.secondLevelTitle}>React App Tab</h1>
-    </div>
-  );
-}
+function ensureItemVisible(container: HTMLDivElement | null, item: HTMLElement | null) {
+  if (!container || !item) {
+    return;
+  }
 
-function thirdLevelTabBar(meta: TabBarRenderMeta<ColorTab>) {
-  return (
-    <TabInnerScroll __test_name="Bar_3" direction="horizontal" className={styles.thirdLevelBar}>
-      {meta.items.map((item) => (
-        <React.Fragment key={item.key}>
-          {defaultTabLabel(item.tab, {
-            onClick: item.onClick,
-            active: item.active,
-            index: item.index,
-          })}
-        </React.Fragment>
-      ))}
-    </TabInnerScroll>
-  );
+  const containerRect = container.getBoundingClientRect();
+  const itemRect = item.getBoundingClientRect();
+  const epsilon = 1;
+  const fullyVisible =
+    itemRect.left >= containerRect.left + epsilon &&
+    itemRect.right <= containerRect.right - epsilon;
+  if (fullyVisible) {
+    return;
+  }
+
+  if (itemRect.left < containerRect.left) {
+    const delta = itemRect.left - containerRect.left;
+    container.scrollTo({ left: container.scrollLeft + delta, behavior: 'smooth' });
+    return;
+  }
+  if (itemRect.right > containerRect.right) {
+    const delta = itemRect.right - containerRect.right;
+    container.scrollTo({ left: container.scrollLeft + delta, behavior: 'smooth' });
+  }
 }
 
 function levelOneTabLabel(tab: ColorTab, meta: TabBarItemRenderMeta) {
@@ -127,6 +119,37 @@ function gradientPanel(color: string, label: string) {
 function ThirdLevelTabs() {
   const tabs = useMemo(() => randomTabs(), []);
   const [active, setActive] = React.useState(0);
+  const barRef = useRef<HTMLDivElement | null>(null);
+  const itemRefs = useRef<Array<HTMLButtonElement | null>>([]);
+
+  useEffect(() => {
+    ensureItemVisible(barRef.current, itemRefs.current[active] ?? null);
+  }, [active]);
+
+  const renderBar = (meta: TabBarRenderMeta<ColorTab>) => (
+    <TabInnerScroll
+      ref={barRef}
+      __test_name="Bar_3"
+      direction="horizontal"
+      className={styles.thirdLevelBar}
+    >
+      {meta.items.map((item) => (
+        <React.Fragment key={item.key}>
+          {defaultTabLabel(
+            item.tab,
+            {
+              onClick: item.onClick,
+              active: item.active,
+              index: item.index,
+            },
+            (node) => {
+              itemRefs.current[item.index] = node;
+            },
+          )}
+        </React.Fragment>
+      ))}
+    </TabInnerScroll>
+  );
 
   return (
     <Tabs
@@ -139,7 +162,7 @@ function ThirdLevelTabs() {
         setActive(next);
         return true;
       }}
-      TabBarRenderer={thirdLevelTabBar}
+      TabBarRenderer={renderBar}
       TabPanelRenderer={(tab) => gradientPanel(tab.color, tab.name)}
     />
   );
@@ -147,6 +170,40 @@ function ThirdLevelTabs() {
 
 function SecondLevelTabs() {
   const [active, setActive] = React.useState(1);
+  const barRef = useRef<HTMLDivElement | null>(null);
+  const itemRefs = useRef<Array<HTMLButtonElement | null>>([]);
+
+  useEffect(() => {
+    ensureItemVisible(barRef.current, itemRefs.current[active] ?? null);
+  }, [active]);
+
+  const renderBar = (meta: TabBarRenderMeta<ColorTab>) => (
+    <div className={styles.secondLevelCustomBar}>
+      <TabInnerScroll
+        ref={barRef}
+        __test_name="Bar_2"
+        direction="horizontal"
+        className={styles.secondLevelItemsScroller}
+      >
+        {meta.items.map((item) => (
+          <React.Fragment key={item.key}>
+            {defaultTabLabel(
+              item.tab,
+              {
+                onClick: item.onClick,
+                active: item.active,
+                index: item.index,
+              },
+              (node) => {
+                itemRefs.current[item.index] = node;
+              },
+            )}
+          </React.Fragment>
+        ))}
+      </TabInnerScroll>
+      <h1 className={styles.secondLevelTitle}>React App Tab</h1>
+    </div>
+  );
 
   return (
     <Tabs
@@ -159,7 +216,7 @@ function SecondLevelTabs() {
         setActive(next);
         return true;
       }}
-      TabBarRenderer={secondLevelTabBar}
+      TabBarRenderer={renderBar}
       TabPanelRenderer={(tab) => {
         if (tab.id === 'cyan') {
           return <ThirdLevelTabs />;

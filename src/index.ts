@@ -8,6 +8,7 @@ export type {
   TabItem,
   TabDirection,
   TabFit,
+  TabsRef,
   TabsProps,
   ReactAppTabsContextType,
   TabBarItemRenderMeta,

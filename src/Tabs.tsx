@@ -1,4 +1,14 @@
-import React, { CSSProperties, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import React, {
+  CSSProperties,
+  forwardRef,
+  useCallback,
+  useContext,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { TabsContext, useReactAppTabsContext } from './context';
 import { gestureManager } from './gesture-manager';
 import styles from './index.module.css';
@@ -6,7 +16,7 @@ import type {
   InternalTabsContextType,
   TabBarRenderItem,
   TabsProps,
-  TabsWithCustomBarProps,
+  TabsRef,
   TabsWithDefaultBarProps,
 } from './types';
 import { clampIndex, getBarFlexDirection, getRootFlexDirection, joinClassNames } from './utils';
@@ -15,7 +25,7 @@ let globalGestureId = 1;
 
 export { useReactAppTabsContext };
 
-export function Tabs<T>(props: TabsProps<T>) {
+function TabsInner<T>(props: TabsProps<T>, ref: React.ForwardedRef<TabsRef>) {
   const {
     __test_name,
     tabs,
@@ -29,8 +39,9 @@ export function Tabs<T>(props: TabsProps<T>) {
     swipable = true,
     fit = 'container',
     direction = 'bottom',
-    lazyLoadDistance = 3,
+    lazyLoadDistance = 1,
     duration = 300,
+    TabBarRenderer
   } = props;
 
   const parent = useContext(TabsContext);
@@ -284,8 +295,17 @@ export function Tabs<T>(props: TabsProps<T>) {
   );
 
   const rootStyle: CSSProperties = {
-    flexDirection: getRootFlexDirection(direction),
+    flexDirection: getRootFlexDirection(direction)
   };
+  const isTopOrBottom = direction === 'top' || direction === 'bottom';
+  const fixedDir: 'width' | 'height' = isTopOrBottom ? 'width' : 'height';
+  const flexDir: 'width' | 'height' = isTopOrBottom ? 'height' : 'width';
+  const fixedSizeStyle: CSSProperties = { [fixedDir]: '100%' };
+  const flexSizeStyle: CSSProperties = fit === 'container' ? { [flexDir]: '100%' } : {};
+  const panelContainerStyle: CSSProperties =
+    fit === 'container'
+      ? { flex: 1, minWidth: 0, minHeight: 0, ...fixedSizeStyle, ...flexSizeStyle, }
+      : { ...fixedSizeStyle, };
 
   const barStyle: CSSProperties = {
     flexDirection: getBarFlexDirection(direction),
@@ -293,16 +313,13 @@ export function Tabs<T>(props: TabsProps<T>) {
   };
 
   const panelTrackStyle: CSSProperties = {
-    width: `${tabs.length * 100}%`,
-    transform: `translate3d(calc(${-currentIndex * (100 / Math.max(tabs.length, 1))}% + ${dragOffset}px), 0, 0)`,
+    ...fixedSizeStyle,
+    ...flexSizeStyle,
+    transform: `translate3d(calc(${-currentIndex * 100}% + ${dragOffset}px), 0, 0)`,
     transition: isAnimating ? `transform ${duration}ms ease` : undefined,
   };
 
   const effectiveLazyDistance = Math.max(lazyLoadDistance, 1);
-  const customBarRenderer =
-    typeof (props as TabsWithCustomBarProps<T>).TabBarRenderer === 'function'
-      ? (props as TabsWithCustomBarProps<T>).TabBarRenderer
-      : undefined;
   const defaultBarProps = props as TabsWithDefaultBarProps<T>;
   const tabBarItems: TabBarRenderItem<T>[] = tabs.map((tab, index) => ({
     tab,
@@ -314,16 +331,22 @@ export function Tabs<T>(props: TabsProps<T>) {
     },
   }));
 
+  useImperativeHandle(
+    ref,
+    () => ({
+      getActiveIndex: () => currentIndex,
+      setActiveIndex: (nextIndex: number) => {
+        commitIndex(nextIndex);
+      },
+    }),
+    [commitIndex, currentIndex],
+  );
+
   return (
     <TabsContext.Provider value={contextValue}>
-      <div className={styles.root} style={rootStyle}>
-        {customBarRenderer ? (
-          customBarRenderer({
-            items: tabBarItems,
-            activeIndex: currentIndex,
-            direction,
-            fit,
-          })
+      <div className={styles.root} style={{ ...rootStyle, ...fixedSizeStyle, ...flexSizeStyle }}>
+        {TabBarRenderer ? (
+          TabBarRenderer({ items: tabBarItems, activeIndex: currentIndex, direction, fit, })
         ) : (
           <div
             className={joinClassNames(styles.tabBar, defaultBarProps.TabBarClassName)}
@@ -331,11 +354,7 @@ export function Tabs<T>(props: TabsProps<T>) {
           >
             {tabBarItems.map((item) => (
               <React.Fragment key={item.key}>
-                {defaultBarProps.TabBarItemRenderer(item.tab, {
-                  onClick: item.onClick,
-                  active: item.active,
-                  index: item.index,
-                })}
+                {defaultBarProps.TabBarItemRenderer(item.tab, item)}
               </React.Fragment>
             ))}
           </div>
@@ -344,6 +363,7 @@ export function Tabs<T>(props: TabsProps<T>) {
         <div
           ref={containerRef}
           className={styles.panelContainer}
+          style={panelContainerStyle}
           onMouseDown={onPanelStart}
           onTouchStart={onPanelStart}
           onMouseUp={onPanelEnd}
@@ -362,10 +382,7 @@ export function Tabs<T>(props: TabsProps<T>) {
                 <div
                   key={key}
                   className={styles.panelItem}
-                  style={{
-                    width: `${100 / Math.max(tabs.length, 1)}%`,
-                    flex: `0 0 ${100 / Math.max(tabs.length, 1)}%`,
-                  }}
+                  style={{ ...fixedSizeStyle, ...flexSizeStyle, flex: fit === 'container' ? '0 0 100%' : '0 0 auto', }}
                 >
                   {visible ? TabPanelRenderer(tab) : null}
                 </div>
@@ -377,3 +394,7 @@ export function Tabs<T>(props: TabsProps<T>) {
     </TabsContext.Provider>
   );
 }
+
+export const Tabs = forwardRef(TabsInner) as <T>(
+  props: TabsProps<T> & { ref?: React.Ref<TabsRef> },
+) => React.ReactElement;

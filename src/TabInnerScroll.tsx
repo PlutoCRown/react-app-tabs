@@ -1,4 +1,14 @@
-import React, { CSSProperties, HTMLAttributes, useContext, useEffect, useId, useMemo, useRef } from 'react';
+import React, {
+  CSSProperties,
+  ForwardedRef,
+  HTMLAttributes,
+  forwardRef,
+  useContext,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+} from 'react';
 import { TabsContext } from './context';
 import { gestureManager } from './gesture-manager';
 
@@ -7,7 +17,7 @@ export type TabInnerScrollProps = HTMLAttributes<HTMLDivElement> & {
   direction?: 'vertical' | 'horizontal';
 };
 
-export function TabInnerScroll(props: TabInnerScrollProps) {
+function TabInnerScrollInner(props: TabInnerScrollProps, forwardedRef: ForwardedRef<HTMLDivElement>) {
   const { __test_name, direction = 'vertical', style, ...rest } = props;
   const context = useContext(TabsContext);
   const ref = useRef<HTMLDivElement | null>(null);
@@ -68,24 +78,54 @@ export function TabInnerScroll(props: TabInnerScrollProps) {
   }, [__test_name, context, direction, id]);
 
   if (!context) {
-    return <div {...rest} style={style} />;
+    return (
+      <div
+        ref={(node) => {
+          ref.current = node;
+          if (typeof forwardedRef === 'function') {
+            forwardedRef(node);
+          } else if (forwardedRef) {
+            forwardedRef.current = node;
+          }
+        }}
+        {...rest}
+        style={style}
+      />
+    );
   }
 
   const managedStyle: CSSProperties =
     direction === 'horizontal'
       ? {
-          overflowX: 'auto',
-          overflowY: 'hidden',
-          touchAction: 'pan-x',
-          WebkitOverflowScrolling: 'touch',
-          ...style,
-        }
+        overflowX: 'auto',
+        overflowY: 'hidden',
+        touchAction: 'pan-x',
+        WebkitOverflowScrolling: 'touch',
+        ...style,
+      }
       : {
-          overflowY: 'auto',
-          overflowX: 'hidden',
-          touchAction: 'pan-y',
-          WebkitOverflowScrolling: 'touch',
-          ...style,
-        };
-  return <div ref={ref} data-tab-inner-scroll-id={id} {...rest} style={managedStyle} />;
+        overflowY: 'auto',
+        overflowX: 'hidden',
+        touchAction: 'pan-y',
+        WebkitOverflowScrolling: 'touch',
+        ...style,
+      };
+  return (
+    <div
+      ref={(node) => {
+        ref.current = node;
+        if (typeof forwardedRef === 'function') {
+          forwardedRef(node);
+        } else if (forwardedRef) {
+          forwardedRef.current = node;
+        }
+      }}
+      data-tab-inner-scroll-id={id}
+      {...rest}
+      style={managedStyle}
+    />
+  );
 }
+
+export const TabInnerScroll = forwardRef<HTMLDivElement, TabInnerScrollProps>(TabInnerScrollInner);
+TabInnerScroll.displayName = 'TabInnerScroll';
