@@ -8,7 +8,7 @@ type GestureCandidate = {
   layer: number;
   canHandle: (dx: number, dy: number) => GestureDecision;
   onStart?: () => void;
-  onMove: (dx: number, dy: number) => void;
+  onMove: (dx: number, dy: number, requestRepick: () => void) => void;
   onEnd: (dx: number, dy: number) => void;
 };
 
@@ -30,6 +30,7 @@ type GestureSession = {
   ownerId: string | number | null;
   ownerBaseDx: number;
   ownerBaseDy: number;
+  repickRequested: boolean;
 };
 
 let session: GestureSession | null = null;
@@ -68,7 +69,7 @@ function registerInnerScrollCandidatesForTarget(target: Element | null) {
                 }
                 return { accept: true, reason: '可继续滚动' };
               },
-              onMove: () => {},
+              onMove: (_dx, _dy, _requestRepick) => {},
               onEnd: () => {},
             });
           }
@@ -137,14 +138,16 @@ function dispatchMove(point: { x: number; y: number }) {
   const dx = point.x - session.startX;
   const dy = point.y - session.startY;
 
-  const { owner: nextOwner, flow } = pickOwner(dx, dy);
-  assignOwner(nextOwner, dx, dy);
-
-  if (flow.length > 0) {
-    console.log('[react-app-tabs][manager] 手势决策', {
-      flow,
-      result: nextOwner ? `${nextOwner.name} 接管` : 'InnerScroll 接管',
-    });
+  if (session.ownerId === null || session.repickRequested) {
+    session.repickRequested = false;
+    const { owner: nextOwner, flow } = pickOwner(dx, dy);
+    assignOwner(nextOwner, dx, dy);
+    if (flow.length > 0) {
+      console.log('[react-app-tabs][manager] 手势决策', {
+        flow,
+        result: nextOwner ? `${nextOwner.name} 接管` : 'InnerScroll 接管',
+      });
+    }
   }
 
   const owner = getOwnerCandidate();
@@ -152,7 +155,12 @@ function dispatchMove(point: { x: number; y: number }) {
     return;
   }
 
-  owner.onMove(dx - session.ownerBaseDx, dy - session.ownerBaseDy);
+  owner.onMove(dx - session.ownerBaseDx, dy - session.ownerBaseDy, () => {
+    if (!session) {
+      return;
+    }
+    session.repickRequested = true;
+  });
 }
 
 function dispatchEnd() {
@@ -226,6 +234,7 @@ export const gestureManager = {
         ownerId: null,
         ownerBaseDx: 0,
         ownerBaseDy: 0,
+        repickRequested: false,
       };
     }
 
@@ -242,7 +251,7 @@ export const gestureManager = {
   },
 
   maybeEnd(id: number) {
-    if (!session || session.ownerId !== id && session.ownerId !== `tab:${id}`) {
+    if (!session || session.ownerId !== id) {
       return;
     }
     dispatchEnd();

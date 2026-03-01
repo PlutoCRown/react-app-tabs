@@ -48,6 +48,8 @@ export function Tabs<T>(props: TabsProps<T>) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const activeGestureId = useRef<number | null>(null);
   const pendingAfterChangeIndex = useRef<number | null>(null);
+  const movedOnceRef = useRef(false);
+  const repickSentRef = useRef(false);
 
   useEffect(() => {
     gestureManager.ensureListeners();
@@ -188,9 +190,18 @@ export function Tabs<T>(props: TabsProps<T>) {
           setIsAnimating(false);
           setDragOffset(0);
           setPreviewBarIndex(currentIndex);
+          movedOnceRef.current = false;
+          repickSentRef.current = false;
         },
-        onMove: (dx, dy) => {
+        onMove: (dx, _dy, requestRepick) => {
           onSwipe?.();
+          if (Math.abs(dx) > 12) {
+            movedOnceRef.current = true;
+          }
+          if (!repickSentRef.current && movedOnceRef.current && Math.abs(dx) <= 4) {
+            repickSentRef.current = true;
+            requestRepick();
+          }
           const previewMode = previewSwipe(dx);
           if (previewMode === 'self') {
             return;
@@ -201,6 +212,8 @@ export function Tabs<T>(props: TabsProps<T>) {
         },
         onEnd: (dx) => {
           activeGestureId.current = null;
+          movedOnceRef.current = false;
+          repickSentRef.current = false;
           const containerWidth = containerRef.current?.clientWidth ?? 0;
           const threshold = Math.max(28, containerWidth * 0.2);
 
@@ -238,6 +251,8 @@ export function Tabs<T>(props: TabsProps<T>) {
     }
     gestureManager.maybeEnd(activeGestureId.current);
     activeGestureId.current = null;
+    movedOnceRef.current = false;
+    repickSentRef.current = false;
   }, []);
 
   const onTrackTransitionEnd = useCallback(
