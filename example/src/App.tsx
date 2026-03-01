@@ -18,6 +18,8 @@ const levelTwoTabs: ColorTab[] = [
   { id: 'sky', name: 'Sky', color: '#55c3ff' },
   { id: 'cyan', name: 'Cyan', color: '#00d5d5' },
   { id: 'purple', name: 'Purple', color: '#7a6bff' },
+  { id: 'midnight', name: 'Midnight', color: '#191970' },
+  { id: 'delft', name: 'Delft', color: '#1F305E' },
 ];
 
 function randomTabs(): ColorTab[] {
@@ -114,8 +116,6 @@ function ThirdLevelTabs() {
       tabs={tabs}
       keyExtractor={(tab) => tab.id}
       direction="top"
-      swipable
-      fit="content"
       TabBarClassName="third-level-bar"
       activeIndex={active}
       onChange={(next) => {
@@ -130,7 +130,7 @@ function ThirdLevelTabs() {
         scrollbarWidth: 'none',
         msOverflowStyle: 'none',
       }}
-      TabBarRenderer={(tab) => defaultTabLabel(tab, tab.id === tabs[active]?.id)}
+      TabBarItemRenderer={(tab) => defaultTabLabel(tab, tab.id === tabs[active]?.id)}
       TabPanelRenderer={(tab) => gradientPanel(tab.color, tab.name)}
     />
   );
@@ -144,8 +144,6 @@ function SecondLevelTabs() {
       tabs={levelTwoTabs}
       keyExtractor={(tab) => tab.id}
       direction="top"
-      swipable
-      fit="content"
       activeIndex={active}
       onChange={(next) => {
         setActive(next);
@@ -156,7 +154,7 @@ function SecondLevelTabs() {
         borderBottom: '1px solid #e5ebf5',
         background: '#f8fbff',
       }}
-      TabBarRenderer={(tab) => defaultTabLabel(tab, tab.id === levelTwoTabs[active]?.id)}
+      TabBarItemRenderer={(tab) => defaultTabLabel(tab, tab.id === levelTwoTabs[active]?.id)}
       TabPanelRenderer={(tab) => {
         if (tab.id === 'cyan') {
           return <ThirdLevelTabs />;
@@ -177,7 +175,6 @@ export function App() {
         tabs={levelOneTabs}
         keyExtractor={(tab) => tab.id}
         direction="bottom"
-        swipable
         activeIndex={active}
         onChange={(next) => {
           setActive(next);
@@ -187,7 +184,7 @@ export function App() {
           borderTop: '1px solid #dce5f6',
           background: '#fff',
         }}
-        TabBarRenderer={(tab) => levelOneTabLabel(tab, tab.id === levelOneTabs[active]?.id)}
+        TabBarItemRenderer={(tab) => levelOneTabLabel(tab, tab.id === levelOneTabs[active]?.id)}
         TabPanelRenderer={(tab) => {
           if (tab.id === 'blue') {
             return <SecondLevelTabs />;

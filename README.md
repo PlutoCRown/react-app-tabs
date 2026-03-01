@@ -32,7 +32,7 @@ export function Demo() {
     <Tabs
       tabs={tabs}
       keyExtractor={(tab) => tab.id}
-      TabBarRenderer={(tab) => <div>{tab.name}</div>}
+      TabBarItemRenderer={(tab) => <div>{tab.name}</div>}
       TabPanelRenderer={(tab) => <div>{tab.name} panel</div>}
       direction="bottom"
       fit="container"
@@ -54,7 +54,7 @@ type Props<T> = {
   tabs: TabItem<T>[];
   keyExtractor: (tab: TabItem<T>) => Key;
 
-  TabBarRenderer: (tab: TabItem<T>) => React.ReactNode;
+  TabBarItemRenderer: (tab: TabItem<T>) => React.ReactNode;
   TabPanelRenderer: (tab: TabItem<T>) => React.ReactNode;
   TabBarClassName?: string;
   TabBarStyle?: CSSProperties;

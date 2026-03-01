@@ -12,7 +12,7 @@ type Props<T> = {
     tabs: TabItem<T>[]
     keyExtractor: (tab:TabItem<T>) => Key
     // 渲染这一块
-    TabBarRenderer: (tab:TabItem<T>) => React.ReactNode
+    TabBarItemRenderer: (tab:TabItem<T>) => React.ReactNode
     TabPanelRenderer: (tab:TabItem<T>) => React.ReactNode
     TabBarClassName?: string // 控制 样式
     TabBarStyle?: CSSProperties

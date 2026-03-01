@@ -17,7 +17,7 @@ export type TabItem<T> = T;
 export type TabsProps<T> = {
   tabs: TabItem<T>[];
   keyExtractor: (tab: TabItem<T>) => Key;
-  TabBarRenderer: (tab: TabItem<T>) => ReactNode;
+  TabBarItemRenderer: (tab: TabItem<T>) => ReactNode;
   TabPanelRenderer: (tab: TabItem<T>) => ReactNode;
   TabBarClassName?: string;
   TabBarStyle?: CSSProperties;
@@ -167,7 +167,7 @@ export function Tabs<T>(props: TabsProps<T>) {
   const {
     tabs,
     keyExtractor,
-    TabBarRenderer,
+    TabBarItemRenderer,
     TabPanelRenderer,
     TabBarClassName,
     TabBarStyle,
@@ -479,7 +479,7 @@ export function Tabs<T>(props: TabsProps<T>) {
                     padding: 0,
                   }}
                 >
-                  {TabBarRenderer(tab)}
+                  {TabBarItemRenderer(tab)}
                 </button>
               );
             })}
@@ -533,7 +533,7 @@ export function Tabs<T>(props: TabsProps<T>) {
                     padding: 0,
                   }}
                 >
-                  {TabBarRenderer(tab)}
+                  {TabBarItemRenderer(tab)}
                 </button>
               );
             })}
