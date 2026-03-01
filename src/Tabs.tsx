@@ -21,13 +21,25 @@ export type TabBarItemRenderMeta = {
   index: number;
 };
 
-export type TabsProps<T> = {
+export type TabBarRenderItem<T> = {
+  tab: TabItem<T>;
+  key: Key;
+  index: number;
+  active: boolean;
+  onClick: () => void;
+};
+
+export type TabBarRenderMeta<T> = {
+  items: TabBarRenderItem<T>[];
+  activeIndex: number;
+  direction: 'bottom' | 'left' | 'right' | 'top';
+  fit: 'container' | 'content';
+};
+
+type TabsBaseProps<T> = {
   tabs: TabItem<T>[];
   keyExtractor: (tab: TabItem<T>) => Key;
-  TabBarItemRenderer: (tab: TabItem<T>, meta: TabBarItemRenderMeta) => ReactNode;
   TabPanelRenderer: (tab: TabItem<T>) => ReactNode;
-  TabBarClassName?: string;
-  TabBarStyle?: CSSProperties;
   onSwipe?: () => void;
   onChange?: (nextIndex: number, prevIndex: number) => undefined | boolean;
   onAfterChange?: (activeIndex: number) => void;
@@ -39,6 +51,22 @@ export type TabsProps<T> = {
   lazyLoadDistance?: number;
   duration?: number;
 };
+
+type TabsWithDefaultBarProps<T> = {
+  TabBarItemRenderer: (tab: TabItem<T>, meta: TabBarItemRenderMeta) => ReactNode;
+  TabBarClassName?: string;
+  TabBarStyle?: CSSProperties;
+  TabBarRenderer?: never;
+};
+
+type TabsWithCustomBarProps<T> = {
+  TabBarRenderer: (meta: TabBarRenderMeta<T>) => ReactNode;
+  TabBarItemRenderer?: never;
+  TabBarClassName?: never;
+  TabBarStyle?: never;
+};
+
+export type TabsProps<T> = TabsBaseProps<T> & (TabsWithDefaultBarProps<T> | TabsWithCustomBarProps<T>);
 
 export type ReactAppTabsContextType = {
   layer: number;
@@ -184,10 +212,7 @@ export function Tabs<T>(props: TabsProps<T>) {
   const {
     tabs,
     keyExtractor,
-    TabBarItemRenderer,
     TabPanelRenderer,
-    TabBarClassName,
-    TabBarStyle,
     onSwipe,
     onChange,
     onAfterChange,
@@ -447,7 +472,7 @@ export function Tabs<T>(props: TabsProps<T>) {
 
   const barStyle: CSSProperties = {
     flexDirection: getBarFlexDirection(direction),
-    ...(TabBarStyle ?? {}),
+    ...(('TabBarStyle' in props ? props.TabBarStyle : undefined) ?? {}),
   };
 
   const panelTrackStyle: CSSProperties = {
@@ -457,27 +482,47 @@ export function Tabs<T>(props: TabsProps<T>) {
   };
 
   const effectiveLazyDistance = Math.max(lazyLoadDistance, 1);
+  const customBarRenderer =
+    typeof (props as TabsWithCustomBarProps<T>).TabBarRenderer === 'function'
+      ? (props as TabsWithCustomBarProps<T>).TabBarRenderer
+      : undefined;
+  const defaultBarProps = props as TabsWithDefaultBarProps<T>;
+  const tabBarItems: TabBarRenderItem<T>[] = tabs.map((tab, index) => ({
+    tab,
+    key: keyExtractor(tab),
+    index,
+    active: index === currentIndex,
+    onClick: () => {
+      commitIndex(index);
+    },
+  }));
 
   return (
     <TabsContext.Provider value={contextValue}>
       <div className={styles.root} style={rootStyle}>
-        <div className={joinClassNames(styles.tabBar, TabBarClassName)} style={barStyle}>
-          {tabs.map((tab, index) => {
-            const key = keyExtractor(tab);
-            const active = index === currentIndex;
-            return (
-              <React.Fragment key={key}>
-                {TabBarItemRenderer(tab, {
-                  onClick: () => {
-                    commitIndex(index);
-                  },
-                  active,
-                  index,
+        {customBarRenderer ? (
+          customBarRenderer({
+            items: tabBarItems,
+            activeIndex: currentIndex,
+            direction,
+            fit,
+          })
+        ) : (
+          <div
+            className={joinClassNames(styles.tabBar, defaultBarProps.TabBarClassName)}
+            style={barStyle}
+          >
+            {tabBarItems.map((item) => (
+              <React.Fragment key={item.key}>
+                {defaultBarProps.TabBarItemRenderer(item.tab, {
+                  onClick: item.onClick,
+                  active: item.active,
+                  index: item.index,
                 })}
               </React.Fragment>
-            );
-          })}
-        </div>
+            ))}
+          </div>
+        )}
 
         <div
           ref={containerRef}

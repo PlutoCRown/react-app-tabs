@@ -32,11 +32,11 @@ export function Demo() {
     <Tabs
       tabs={tabs}
       keyExtractor={(tab) => tab.id}
-      TabBarItemRenderer={(tab, { onClick, active, itemStyle }) => (
+      TabBarItemRenderer={(tab, { onClick, active }) => (
         <button
           type="button"
           onClick={onClick}
-          style={{ ...itemStyle, opacity: active ? 1 : 0.6 }}
+          style={{ opacity: active ? 1 : 0.6 }}
         >
           {tab.name}
         </button>
@@ -61,20 +61,27 @@ type TabBarItemRenderMeta = {
   onClick: () => void;
   active: boolean;
   index: number;
-  itemStyle?: CSSProperties;
+};
+
+type TabBarRenderItem<T> = {
+  tab: TabItem<T>;
+  key: Key;
+  index: number;
+  active: boolean;
+  onClick: () => void;
+};
+
+type TabBarRenderMeta<T> = {
+  items: TabBarRenderItem<T>[];
+  activeIndex: number;
+  direction: 'bottom' | 'left' | 'right' | 'top';
+  fit: 'container' | 'content';
 };
 
 type Props<T> = {
   tabs: TabItem<T>[];
   keyExtractor: (tab: TabItem<T>) => Key;
-
-  TabBarItemRenderer: (
-    tab: TabItem<T>,
-    meta: TabBarItemRenderMeta
-  ) => React.ReactNode;
   TabPanelRenderer: (tab: TabItem<T>) => React.ReactNode;
-  TabBarClassName?: string;
-  TabBarStyle?: CSSProperties;
 
   onSwipe?: () => void;
   onChange?: (nextIndex: number, prevIndex: number) => undefined | boolean;
@@ -88,7 +95,23 @@ type Props<T> = {
   direction?: 'bottom' | 'left' | 'right' | 'top';
   lazyLoadDistance?: number;
   duration?: number;
-};
+} & (
+  | {
+      TabBarItemRenderer: (
+        tab: TabItem<T>,
+        meta: TabBarItemRenderMeta
+      ) => React.ReactNode;
+      TabBarClassName?: string;
+      TabBarStyle?: CSSProperties;
+      TabBarRenderer?: never;
+    }
+  | {
+      TabBarRenderer: (meta: TabBarRenderMeta<T>) => React.ReactNode;
+      TabBarItemRenderer?: never;
+      TabBarClassName?: never;
+      TabBarStyle?: never;
+    }
+);
 ```
 
 ## 嵌套手势说明

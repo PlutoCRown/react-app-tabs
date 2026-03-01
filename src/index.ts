@@ -5,4 +5,6 @@ export type {
   TabsProps,
   ReactAppTabsContextType,
   TabBarItemRenderMeta,
+  TabBarRenderItem,
+  TabBarRenderMeta,
 } from './Tabs';
