@@ -70,6 +70,7 @@ type Props<T> = {
   fit?: 'container' | 'content';
   direction?: 'bottom' | 'left' | 'right' | 'top';
   lazyLoadDistance?: number;
+  duration?: number;
 };
 ```
 
@@ -77,7 +78,7 @@ type Props<T> = {
 
 组件内部维护一个上下文层级 `layer`。当嵌套 Tabs 同时收到 `down` 事件时，会以层级更深的 Tabs 作为当前手势响应者，外层将被忽略，从而优先响应子 Panel 的 swipe。
 
-`move` 事件统一挂在 `document`，全局只有一组监听器。
+`move` 事件统一挂在 `document`，全局只有一组监听器。拖动中会通过 `transform` 实时预览相邻 Panel，松手后使用 `transition` 平滑吸附，默认时长 `duration=300ms`，并在过渡结束后触发 `onAfterChange`。
 
 ## 本地开发
 
