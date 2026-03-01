@@ -24,7 +24,7 @@ const levelTwoTabs: ColorTab[] = [
 
 function randomTabs(): ColorTab[] {
   const items: ColorTab[] = [];
-  for (let i = 0; i < 7; i += 1) {
+  for (let i = 0; i < 9; i += 1) {
     const hue = Math.floor(Math.random() * 360);
     items.push({
       id: `random-${i}`,

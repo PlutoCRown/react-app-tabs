@@ -1,13 +1,23 @@
 import type React from 'react';
 
+type GestureDecision = { accept: boolean; reason: string };
+
 type GestureCandidate = {
-  id: number;
+  id: string | number;
   name: string;
   layer: number;
-  canHandle: (dx: number, dy: number) => { accept: boolean; reason: string };
+  canHandle: (dx: number, dy: number) => GestureDecision;
   onStart?: () => void;
   onMove: (dx: number, dy: number) => void;
   onEnd: (dx: number, dy: number) => void;
+};
+
+type RegisteredInnerScroll = {
+  id: string;
+  name: string;
+  layer: number;
+  getElement: () => HTMLElement | null;
+  shouldAllowParentSwipe: (dx: number, dy: number) => boolean;
 };
 
 type GestureSession = {
@@ -15,14 +25,16 @@ type GestureSession = {
   startY: number;
   currentX: number;
   currentY: number;
-  candidates: Map<number, GestureCandidate>;
-  ownerId: number | null;
+  startTarget: Element | null;
+  candidates: Map<string | number, GestureCandidate>;
+  ownerId: string | number | null;
   ownerBaseDx: number;
   ownerBaseDy: number;
 };
 
 let session: GestureSession | null = null;
 let attached = false;
+const innerScrollRegistry = new Map<string, RegisteredInnerScroll>();
 
 function getOwnerCandidate() {
   if (!session || session.ownerId === null) {
@@ -31,30 +43,64 @@ function getOwnerCandidate() {
   return session.candidates.get(session.ownerId) ?? null;
 }
 
+function registerInnerScrollCandidatesForTarget(target: Element | null) {
+  if (!session || !target) {
+    return;
+  }
+  let node: Element | null = target;
+  while (node) {
+    const id = node.getAttribute('data-tab-inner-scroll-id');
+    if (id) {
+      const entry = innerScrollRegistry.get(id);
+      if (entry) {
+        const element = entry.getElement();
+        if (element === node) {
+          const candidateId = `inner:${id}`;
+          if (!session.candidates.has(candidateId)) {
+            session.candidates.set(candidateId, {
+              id: candidateId,
+              name: entry.name,
+              layer: entry.layer + 0.5,
+              canHandle: (dx, dy) => {
+                const allowParent = entry.shouldAllowParentSwipe(dx, dy);
+                if (allowParent) {
+                  return { accept: false, reason: '已到边界' };
+                }
+                return { accept: true, reason: '可继续滚动' };
+              },
+              onMove: () => {},
+              onEnd: () => {},
+            });
+          }
+        }
+      }
+    }
+    node = node.parentElement;
+  }
+}
+
 function pickOwner(dx: number, dy: number) {
   if (!session) {
     return { owner: null as GestureCandidate | null, flow: [] as string[] };
   }
 
-  let picked: GestureCandidate | null = null;
   const flow: string[] = [];
   const candidates = [...session.candidates.values()].sort((a, b) => b.layer - a.layer);
 
+  let owner: GestureCandidate | null = null;
   for (const candidate of candidates) {
     const decision = candidate.canHandle(dx, dy);
     if (!decision.accept) {
       flow.push(`触碰事件交给${candidate.name}，拒绝接管（${decision.reason}）`);
       continue;
     }
-    if (!picked) {
-      picked = candidate;
-      flow.push(`触碰事件交给${candidate.name}，同意接管（${decision.reason}）`);
-    } else {
-      flow.push(`触碰事件交给${candidate.name}，同意接管但层级较低（${decision.reason}）`);
-    }
+
+    flow.push(`触碰事件交给${candidate.name}，同意滚动（${decision.reason}）`);
+    owner = candidate;
+    break;
   }
 
-  return { owner: picked, flow };
+  return { owner, flow };
 }
 
 function assignOwner(nextOwner: GestureCandidate | null, dx: number, dy: number) {
@@ -90,12 +136,14 @@ function dispatchMove(point: { x: number; y: number }) {
 
   const dx = point.x - session.startX;
   const dy = point.y - session.startY;
+
   const { owner: nextOwner, flow } = pickOwner(dx, dy);
   assignOwner(nextOwner, dx, dy);
+
   if (flow.length > 0) {
     console.log('[react-app-tabs][manager] 手势决策', {
       flow,
-      result: nextOwner ? `${nextOwner.name} 接管` : '无组件接管',
+      result: nextOwner ? `${nextOwner.name} 接管` : 'InnerScroll 接管',
     });
   }
 
@@ -103,6 +151,7 @@ function dispatchMove(point: { x: number; y: number }) {
   if (!owner) {
     return;
   }
+
   owner.onMove(dx - session.ownerBaseDx, dy - session.ownerBaseDy);
 }
 
@@ -160,10 +209,7 @@ export const gestureManager = {
     attached = true;
   },
 
-  registerCandidate(
-    event: React.MouseEvent | React.TouchEvent,
-    candidate: GestureCandidate,
-  ) {
+  registerCandidate(event: React.MouseEvent | React.TouchEvent, candidate: GestureCandidate) {
     const point = getClientPoint(event);
     if (!point) {
       return;
@@ -175,6 +221,7 @@ export const gestureManager = {
         startY: point.y,
         currentX: point.x,
         currentY: point.y,
+        startTarget: event.target instanceof Element ? event.target : null,
         candidates: new Map(),
         ownerId: null,
         ownerBaseDx: 0,
@@ -182,11 +229,20 @@ export const gestureManager = {
       };
     }
 
+    registerInnerScrollCandidatesForTarget(event.target instanceof Element ? event.target : null);
     session.candidates.set(candidate.id, candidate);
   },
 
+  registerInnerScroll(entry: RegisteredInnerScroll) {
+    innerScrollRegistry.set(entry.id, entry);
+  },
+
+  unregisterInnerScroll(id: string) {
+    innerScrollRegistry.delete(id);
+  },
+
   maybeEnd(id: number) {
-    if (!session || session.ownerId !== id) {
+    if (!session || session.ownerId !== id && session.ownerId !== `tab:${id}`) {
       return;
     }
     dispatchEnd();

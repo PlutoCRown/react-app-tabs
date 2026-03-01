@@ -79,7 +79,4 @@ export type InternalTabsContextType = ReactAppTabsContextType & {
   requestSwipe: (step: -1 | 1) => boolean;
   previewSwipe: (dx: number) => 'self' | 'parent' | 'none';
   clearPreview: () => void;
-  registerInnerScroll: (id: string, controller: InnerScrollController) => void;
-  unregisterInnerScroll: (id: string) => void;
-  getInnerScrollControllerFromTarget: (target: EventTarget | null) => InnerScrollController | undefined;
 };

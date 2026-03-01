@@ -1,6 +1,6 @@
 import React, { CSSProperties, HTMLAttributes, useContext, useEffect, useId, useMemo, useRef } from 'react';
 import { TabsContext } from './context';
-import type { InnerScrollController } from './types';
+import { gestureManager } from './gesture-manager';
 
 export type TabInnerScrollProps = HTMLAttributes<HTMLDivElement> & {
   __test_name?: string;
@@ -18,9 +18,11 @@ export function TabInnerScroll(props: TabInnerScrollProps) {
     if (!context) {
       return;
     }
-
-    const controller: InnerScrollController = {
-      testName: __test_name ?? `InnerScroll_${id}`,
+    gestureManager.registerInnerScroll({
+      id,
+      name: __test_name ?? `InnerScroll_${id}`,
+      layer: context.layer,
+      getElement: () => ref.current,
       shouldAllowParentSwipe(dx, dy) {
         const element = ref.current;
         if (!element) {
@@ -59,13 +61,11 @@ export function TabInnerScroll(props: TabInnerScrollProps) {
         }
         return true;
       },
-    };
-
-    context.registerInnerScroll(id, controller);
+    });
     return () => {
-      context.unregisterInnerScroll(id);
+      gestureManager.unregisterInnerScroll(id);
     };
-  }, [context, direction, id]);
+  }, [__test_name, context, direction, id]);
 
   if (!context) {
     return <div {...rest} style={style} />;

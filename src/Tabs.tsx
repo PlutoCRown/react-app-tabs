@@ -3,7 +3,6 @@ import { TabsContext, useReactAppTabsContext } from './context';
 import { gestureManager } from './gesture-manager';
 import styles from './index.module.css';
 import type {
-  InnerScrollController,
   InternalTabsContextType,
   TabBarRenderItem,
   TabsProps,
@@ -49,7 +48,6 @@ export function Tabs<T>(props: TabsProps<T>) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const activeGestureId = useRef<number | null>(null);
   const pendingAfterChangeIndex = useRef<number | null>(null);
-  const innerScrollControllersRef = useRef<Map<string, InnerScrollController>>(new Map());
 
   useEffect(() => {
     gestureManager.ensureListeners();
@@ -138,29 +136,6 @@ export function Tabs<T>(props: TabsProps<T>) {
     parent?.clearPreview?.();
   }, [parent]);
 
-  const registerInnerScroll = useCallback((id: string, controller: InnerScrollController) => {
-    innerScrollControllersRef.current.set(id, controller);
-  }, []);
-
-  const unregisterInnerScroll = useCallback((id: string) => {
-    innerScrollControllersRef.current.delete(id);
-  }, []);
-
-  const getInnerScrollControllerFromTarget = useCallback((target: EventTarget | null) => {
-    if (!target || !(target instanceof Element)) {
-      return undefined;
-    }
-    const owner = target.closest('[data-tab-inner-scroll-id]');
-    if (!owner) {
-      return undefined;
-    }
-    const id = owner.getAttribute('data-tab-inner-scroll-id');
-    if (!id) {
-      return undefined;
-    }
-    return innerScrollControllersRef.current.get(id);
-  }, []);
-
   const previewSwipe = useCallback(
     (dx: number) => {
       setIsAnimating(false);
@@ -185,7 +160,6 @@ export function Tabs<T>(props: TabsProps<T>) {
 
       const id = globalGestureId++;
       activeGestureId.current = id;
-      const innerController = getInnerScrollControllerFromTarget(event.target);
 
       gestureManager.registerCandidate(event, {
         id,
@@ -194,12 +168,6 @@ export function Tabs<T>(props: TabsProps<T>) {
         canHandle: (dx, dy) => {
           if (Math.abs(dx) < Math.abs(dy)) {
             return { accept: false, reason: '纵向位移更大' };
-          }
-          if (innerController && !innerController.shouldAllowParentSwipe(dx, dy)) {
-            return {
-              accept: false,
-              reason: `${innerController.testName ?? 'InnerScroll'} 尚未滚动到边界`,
-            };
           }
           if (dx > 0) {
             if (currentIndex > 0) {
@@ -261,7 +229,6 @@ export function Tabs<T>(props: TabsProps<T>) {
       startAnimation,
       swipable,
       tabs.length,
-      getInnerScrollControllerFromTarget,
     ],
   );
 
@@ -297,22 +264,8 @@ export function Tabs<T>(props: TabsProps<T>) {
       requestSwipe,
       previewSwipe,
       clearPreview,
-      registerInnerScroll,
-      unregisterInnerScroll,
-      getInnerScrollControllerFromTarget,
     }),
-    [
-      clearPreview,
-      currentIndex,
-      getInnerScrollControllerFromTarget,
-      layer,
-      parent,
-      previewSwipe,
-      registerInnerScroll,
-      requestSwipe,
-      tabs,
-      unregisterInnerScroll,
-    ],
+    [clearPreview, currentIndex, layer, parent, previewSwipe, requestSwipe, tabs],
   );
 
   const rootStyle: CSSProperties = {
