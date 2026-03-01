@@ -19,7 +19,7 @@ const levelTwoTabs: ColorTab[] = [
   { id: 'cyan', name: 'Cyan', color: '#00d5d5' },
   { id: 'purple', name: 'Purple', color: '#7a6bff' },
   { id: 'midnight', name: 'Midnight', color: '#191970' },
-  { id: 'delft', name: 'Delft', color: '#1F305E' },
+  // { id: 'delft', name: 'Delft', color: '#1F305E' },
 ];
 
 function randomTabs(): ColorTab[] {
@@ -35,11 +35,19 @@ function randomTabs(): ColorTab[] {
   return items;
 }
 
-function defaultTabLabel(tab: ColorTab, active: boolean) {
+function defaultTabLabel(
+  tab: ColorTab, config: {active: boolean, onClick: () => void}
+) {
+  const {active, onClick} = config;
   return (
-    <div
+    <button
+      type="button"
+      onClick={onClick}
       style={{
-        width: '100%',
+        background: 'none',
+        border: 'none',
+        cursor: 'pointer',
+        width: 'auto',
         textWrap: 'nowrap',
         padding: '10px 12px',
         fontSize: 13,
@@ -52,19 +60,28 @@ function defaultTabLabel(tab: ColorTab, active: boolean) {
       }}
     >
       {tab.name}
-    </div>
+    </button>
   );
 }
 
-function levelOneTabLabel(tab: ColorTab, active: boolean) {
+function levelOneTabLabel(
+  tab: ColorTab, config: {active: boolean, onClick: () => void}
+) {
+  const {active, onClick} = config;
   return (
-    <div
+    <button
+      type="button"
+      onClick={onClick}
       style={{
+        background: 'none',
+        border: 'none',
+        cursor: 'pointer',
         width: '100%',
         padding: '8px 10px 10px',
         display: 'grid',
         justifyItems: 'center',
         gap: 6,
+        flex:'1'
       }}
     >
       <div
@@ -87,7 +104,7 @@ function levelOneTabLabel(tab: ColorTab, active: boolean) {
       >
         {tab.name}
       </div>
-    </div>
+    </button>
   );
 }
 
@@ -130,7 +147,7 @@ function ThirdLevelTabs() {
         scrollbarWidth: 'none',
         msOverflowStyle: 'none',
       }}
-      TabBarItemRenderer={(tab) => defaultTabLabel(tab, tab.id === tabs[active]?.id)}
+      TabBarItemRenderer={defaultTabLabel}
       TabPanelRenderer={(tab) => gradientPanel(tab.color, tab.name)}
     />
   );
@@ -154,7 +171,8 @@ function SecondLevelTabs() {
         borderBottom: '1px solid #e5ebf5',
         background: '#f8fbff',
       }}
-      TabBarItemRenderer={(tab) => defaultTabLabel(tab, tab.id === levelTwoTabs[active]?.id)}
+      TabBarItemRenderer={defaultTabLabel
+      }
       TabPanelRenderer={(tab) => {
         if (tab.id === 'cyan') {
           return <ThirdLevelTabs />;
@@ -184,7 +202,8 @@ export function App() {
           borderTop: '1px solid #dce5f6',
           background: '#fff',
         }}
-        TabBarItemRenderer={(tab) => levelOneTabLabel(tab, tab.id === levelOneTabs[active]?.id)}
+        TabBarItemRenderer={levelOneTabLabel
+        }
         TabPanelRenderer={(tab) => {
           if (tab.id === 'blue') {
             return <SecondLevelTabs />;

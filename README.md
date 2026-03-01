@@ -32,7 +32,15 @@ export function Demo() {
     <Tabs
       tabs={tabs}
       keyExtractor={(tab) => tab.id}
-      TabBarItemRenderer={(tab) => <div>{tab.name}</div>}
+      TabBarItemRenderer={(tab, { onClick, active, itemStyle }) => (
+        <button
+          type="button"
+          onClick={onClick}
+          style={{ ...itemStyle, opacity: active ? 1 : 0.6 }}
+        >
+          {tab.name}
+        </button>
+      )}
       TabPanelRenderer={(tab) => <div>{tab.name} panel</div>}
       direction="bottom"
       fit="container"
@@ -49,12 +57,21 @@ export function Demo() {
 ```tsx
 type TabItem<T> = T;
 type Key = string | number;
+type TabBarItemRenderMeta = {
+  onClick: () => void;
+  active: boolean;
+  index: number;
+  itemStyle?: CSSProperties;
+};
 
 type Props<T> = {
   tabs: TabItem<T>[];
   keyExtractor: (tab: TabItem<T>) => Key;
 
-  TabBarItemRenderer: (tab: TabItem<T>) => React.ReactNode;
+  TabBarItemRenderer: (
+    tab: TabItem<T>,
+    meta: TabBarItemRenderMeta
+  ) => React.ReactNode;
   TabPanelRenderer: (tab: TabItem<T>) => React.ReactNode;
   TabBarClassName?: string;
   TabBarStyle?: CSSProperties;

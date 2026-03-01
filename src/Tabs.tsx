@@ -15,10 +15,16 @@ export type Key = string | number;
 
 export type TabItem<T> = T;
 
+export type TabBarItemRenderMeta = {
+  onClick: () => void;
+  active: boolean;
+  index: number;
+};
+
 export type TabsProps<T> = {
   tabs: TabItem<T>[];
   keyExtractor: (tab: TabItem<T>) => Key;
-  TabBarItemRenderer: (tab: TabItem<T>) => ReactNode;
+  TabBarItemRenderer: (tab: TabItem<T>, meta: TabBarItemRenderMeta) => ReactNode;
   TabPanelRenderer: (tab: TabItem<T>) => ReactNode;
   TabBarClassName?: string;
   TabBarStyle?: CSSProperties;
@@ -458,18 +464,17 @@ export function Tabs<T>(props: TabsProps<T>) {
         <div className={joinClassNames(styles.tabBar, TabBarClassName)} style={barStyle}>
           {tabs.map((tab, index) => {
             const key = keyExtractor(tab);
+            const active = index === currentIndex;
             return (
-              <button
-                key={key}
-                type="button"
-                onClick={() => commitIndex(index)}
-                className={styles.tabButton}
-                style={{
-                  flex: fit === 'container' ? 1 : undefined,
-                }}
-              >
-                {TabBarItemRenderer(tab)}
-              </button>
+              <React.Fragment key={key}>
+                {TabBarItemRenderer(tab, {
+                  onClick: () => {
+                    commitIndex(index);
+                  },
+                  active,
+                  index,
+                })}
+              </React.Fragment>
             );
           })}
         </div>

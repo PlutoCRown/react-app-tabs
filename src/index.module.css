@@ -10,13 +10,6 @@
   display: flex;
 }
 
-.tabButton {
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 0;
-}
-
 .panelContainer {
   flex: 1;
   min-width: 0;
