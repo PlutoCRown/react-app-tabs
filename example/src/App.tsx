@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { TabBarItemRenderMeta, TabBarRenderMeta, Tabs } from '../../src';
+import { TabBarItemRenderMeta, TabBarRenderMeta, TabInnerScroll, Tabs } from '../../src';
 import styles from './index.module.css';
 
 type ColorTab = {
@@ -55,7 +55,11 @@ function defaultTabLabel(tab: ColorTab, meta: TabBarItemRenderMeta) {
 function secondLevelTabBar(meta: TabBarRenderMeta<ColorTab>) {
   return (
     <div className={styles.secondLevelCustomBar}>
-      <div className={styles.secondLevelItemsScroller}>
+      <TabInnerScroll
+        __test_name="Bar_2"
+        direction="horizontal"
+        className={styles.secondLevelItemsScroller}
+      >
         {meta.items.map((item) => (
           <React.Fragment key={item.key}>
             {defaultTabLabel(item.tab, {
@@ -65,9 +69,25 @@ function secondLevelTabBar(meta: TabBarRenderMeta<ColorTab>) {
             })}
           </React.Fragment>
         ))}
-      </div>
+      </TabInnerScroll>
       <h1 className={styles.secondLevelTitle}>React App Tab</h1>
     </div>
+  );
+}
+
+function thirdLevelTabBar(meta: TabBarRenderMeta<ColorTab>) {
+  return (
+    <TabInnerScroll __test_name="Bar_3" direction="horizontal" className={styles.thirdLevelBar}>
+      {meta.items.map((item) => (
+        <React.Fragment key={item.key}>
+          {defaultTabLabel(item.tab, {
+            onClick: item.onClick,
+            active: item.active,
+            index: item.index,
+          })}
+        </React.Fragment>
+      ))}
+    </TabInnerScroll>
   );
 }
 
@@ -110,16 +130,16 @@ function ThirdLevelTabs() {
 
   return (
     <Tabs
+      __test_name="Tab_3"
       tabs={tabs}
       keyExtractor={(tab) => tab.id}
       direction="top"
-      TabBarClassName={styles.thirdLevelBar}
       activeIndex={active}
       onChange={(next) => {
         setActive(next);
         return true;
       }}
-      TabBarItemRenderer={defaultTabLabel}
+      TabBarRenderer={thirdLevelTabBar}
       TabPanelRenderer={(tab) => gradientPanel(tab.color, tab.name)}
     />
   );
@@ -130,6 +150,7 @@ function SecondLevelTabs() {
 
   return (
     <Tabs
+      __test_name="Tab_2"
       tabs={levelTwoTabs}
       keyExtractor={(tab) => tab.id}
       direction="top"
@@ -155,6 +176,7 @@ export function App() {
   return (
     <div className={styles.appRoot}>
       <Tabs
+        __test_name="Tab_1"
         tabs={levelOneTabs}
         keyExtractor={(tab) => tab.id}
         direction="bottom"

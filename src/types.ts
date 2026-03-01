@@ -30,6 +30,7 @@ export type TabBarRenderMeta<T> = {
 };
 
 export type TabsBaseProps<T> = {
+  __test_name?: string;
   tabs: TabItem<T>[];
   keyExtractor: (tab: TabItem<T>) => Key;
   TabPanelRenderer: (tab: TabItem<T>) => ReactNode;
@@ -69,8 +70,16 @@ export type ReactAppTabsContextType = {
   getPrevLayer: () => ReactAppTabsContextType | undefined;
 };
 
+export type InnerScrollController = {
+  testName?: string;
+  shouldAllowParentSwipe: (dx: number, dy: number) => boolean;
+};
+
 export type InternalTabsContextType = ReactAppTabsContextType & {
   requestSwipe: (step: -1 | 1) => boolean;
   previewSwipe: (dx: number) => 'self' | 'parent' | 'none';
   clearPreview: () => void;
+  registerInnerScroll: (id: string, controller: InnerScrollController) => void;
+  unregisterInnerScroll: (id: string) => void;
+  getInnerScrollControllerFromTarget: (target: EventTarget | null) => InnerScrollController | undefined;
 };

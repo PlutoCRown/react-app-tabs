@@ -124,8 +124,6 @@ type Props<T> = {
 
 ```bash
 bun install
-bun run check
-bun run build
 bun run example
 ```
 

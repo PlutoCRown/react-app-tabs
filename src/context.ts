@@ -12,6 +12,9 @@ export function useReactAppTabsContext() {
     requestSwipe: _requestSwipe,
     previewSwipe: _previewSwipe,
     clearPreview: _clearPreview,
+    registerInnerScroll: _registerInnerScroll,
+    unregisterInnerScroll: _unregisterInnerScroll,
+    getInnerScrollControllerFromTarget: _getInnerScrollControllerFromTarget,
     ...publicContext
   } = context;
   return publicContext;
