@@ -56,6 +56,133 @@
   color: #0f1722;
 }
 
+.cyanPanel {
+  width: 100%;
+  height: 100%;
+  padding: 18px 16px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.cyanDocTitle {
+  margin: 0 0 4px;
+  font-size: 20px;
+  line-height: 1.1;
+  font-weight: 800;
+  color: #11243d;
+}
+
+.cyanDocIntro {
+  background: #ffffffbf;
+  border: 1px solid #dce7f3;
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+
+.cyanSection {
+  background: #ffffffb3;
+  border: 1px solid #dce7f3;
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+
+.cyanSectionTitle {
+  margin: 0 0 8px;
+  font-size: 15px;
+  line-height: 1.2;
+  color: #16324f;
+}
+
+.cyanPoints {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cyanPoint {
+  font-size: 14px;
+  line-height: 1.35;
+  color: #1f2f46;
+}
+
+.cyanParagraph {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #1c2d45;
+}
+
+.cyanSection .cyanParagraph + .cyanParagraph {
+  margin-top: 8px;
+}
+
+.cyanCodeFigure {
+  margin: 10px 0 0;
+}
+
+.cyanCodeCaption {
+  margin: 0 0 6px;
+  font-size: 12px;
+  letter-spacing: 0.3px;
+  color: #415a7d;
+}
+
+.cyanCodeBlock {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #d6e3f4;
+  background: #f5f9ff;
+  color: #153252;
+  font-size: 12px;
+  line-height: 1.5;
+  overflow-x: auto;
+}
+
+.cyanCodeLang {
+  margin-top: 6px;
+  width: fit-content;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid #d6e3f4;
+  background: #ffffffd9;
+  color: #395777;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+
+.cyanTip {
+  margin: 10px 0 0;
+  border-radius: 10px;
+  border: 1px solid #c9def3;
+  background: #edf6ff;
+  padding: 8px 10px;
+  color: #234564;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.cyanFooter {
+  margin: 2px 2px 0;
+  font-size: 13px;
+  color: #2f4f71;
+  line-height: 1.45;
+}
+
+.cyanOrderedList {
+  margin: 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
 .thirdLevelBar {
   display: flex;
   overflow-x: auto;
@@ -76,7 +203,7 @@
   gap: 12px;
   padding-right: 12px;
   border-bottom: 1px solid #e5ebf5;
-  background-color: aqua;
+  background: #f8fbff;
 }
 
 .secondLevelItemsScroller {
@@ -99,7 +226,6 @@
   line-height: 1;
   white-space: nowrap;
   color: #22314d;
-  background-color: aqua;
 }
 
 .firstLevelBar {
