@@ -40,7 +40,13 @@ export type ReactAppTabsContextType = {
   getPrevLayer: () => ReactAppTabsContextType | undefined;
 };
 
-const TabsContext = createContext<ReactAppTabsContextType | undefined>(undefined);
+type InternalTabsContextType = ReactAppTabsContextType & {
+  requestSwipe: (step: -1 | 1) => boolean;
+  previewSwipe: (dx: number) => 'self' | 'parent' | 'none';
+  clearPreview: () => void;
+};
+
+const TabsContext = createContext<InternalTabsContextType | undefined>(undefined);
 
 let globalGestureId = 1;
 
@@ -144,7 +150,17 @@ function getRootFlexDirection(direction: NonNullable<TabsProps<any>['direction']
 }
 
 export function useReactAppTabsContext() {
-  return useContext(TabsContext);
+  const context = useContext(TabsContext);
+  if (!context) {
+    return undefined;
+  }
+  const {
+    requestSwipe: _requestSwipe,
+    previewSwipe: _previewSwipe,
+    clearPreview: _clearPreview,
+    ...publicContext
+  } = context;
+  return publicContext;
 }
 
 export function Tabs<T>(props: TabsProps<T>) {
@@ -177,6 +193,7 @@ export function Tabs<T>(props: TabsProps<T>) {
   );
   const [dragOffset, setDragOffset] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [, setPreviewBarIndex] = useState<number | null>(null);
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const activeGestureId = useRef<number | null>(null);
@@ -197,6 +214,7 @@ export function Tabs<T>(props: TabsProps<T>) {
       const next = clampIndex(activeIndex as number, tabs.length);
       setCurrentIndex(next);
       setDragOffset(0);
+      setPreviewBarIndex(null);
       return;
     }
 
@@ -206,11 +224,13 @@ export function Tabs<T>(props: TabsProps<T>) {
       return next;
     });
     setDragOffset(0);
+    setPreviewBarIndex(null);
   }, [activeIndex, isControlled, tabs.length]);
 
   const startAnimation = useCallback(
     (targetIndex: number, shouldTriggerAfterChange: boolean) => {
       setDragOffset(0);
+      setPreviewBarIndex(null);
       setCurrentIndex(targetIndex);
       if (duration <= 0) {
         setIsAnimating(false);
@@ -231,21 +251,63 @@ export function Tabs<T>(props: TabsProps<T>) {
       const prev = currentIndex;
       if (normalizedNext === prev) {
         startAnimation(prev, false);
-        return;
+        return false;
       }
 
       const allowed = onChange?.(normalizedNext, prev);
       if (allowed === false) {
         startAnimation(prev, false);
-        return;
+        return false;
       }
 
       if (!isControlled) {
         setInternalIndex(normalizedNext);
       }
       startAnimation(normalizedNext, true);
+      return true;
     },
     [currentIndex, isControlled, onChange, startAnimation, tabs.length],
+  );
+
+  const requestSwipe = useCallback(
+    (step: -1 | 1) => {
+      const target = currentIndex + step;
+      if (target >= 0 && target < tabs.length) {
+        return commitIndex(target);
+      }
+      return parent?.requestSwipe?.(step) ?? false;
+    },
+    [commitIndex, currentIndex, parent, tabs.length],
+  );
+
+  const clearPreview = useCallback(() => {
+    setDragOffset(0);
+    setPreviewBarIndex(null);
+    parent?.clearPreview?.();
+  }, [parent]);
+
+  const previewSwipe = useCallback(
+    (dx: number) => {
+      const canGoPrev = currentIndex > 0;
+      const canGoNext = currentIndex < tabs.length - 1;
+
+      if ((dx > 0 && !canGoPrev) || (dx < 0 && !canGoNext)) {
+        const parentPreview = parent?.previewSwipe?.(dx) ?? 'none';
+        return parentPreview === 'none' ? 'none' : 'parent';
+      }
+
+      setIsAnimating(false);
+      setDragOffset(dx);
+      if (dx > 16) {
+        setPreviewBarIndex(currentIndex - 1);
+      } else if (dx < -16) {
+        setPreviewBarIndex(currentIndex + 1);
+      } else {
+        setPreviewBarIndex(currentIndex);
+      }
+      return 'self';
+    },
+    [currentIndex, parent, tabs.length],
   );
 
   const onPanelStart = useCallback(
@@ -264,6 +326,7 @@ export function Tabs<T>(props: TabsProps<T>) {
       pendingAfterChangeIndex.current = null;
       setIsAnimating(false);
       setDragOffset(0);
+      setPreviewBarIndex(currentIndex);
 
       gestureManager.start({
         id,
@@ -274,14 +337,18 @@ export function Tabs<T>(props: TabsProps<T>) {
         currentY: point.y,
         onMove: (dx) => {
           onSwipe?.();
-          const canGoPrev = currentIndex > 0;
-          const canGoNext = currentIndex < tabs.length - 1;
-
-          let previewOffset = dx;
-          if ((dx > 0 && !canGoPrev) || (dx < 0 && !canGoNext)) {
-            previewOffset = dx * 0.35;
+          const previewMode = previewSwipe(dx);
+          if (previewMode === 'parent') {
+            setDragOffset(0);
+            setPreviewBarIndex(null);
+            return;
           }
-          setDragOffset(previewOffset);
+          if (previewMode === 'self') {
+            return;
+          }
+          setIsAnimating(false);
+          setDragOffset(dx * 0.35);
+          setPreviewBarIndex(currentIndex);
         },
         onEnd: (dx) => {
           activeGestureId.current = null;
@@ -289,18 +356,35 @@ export function Tabs<T>(props: TabsProps<T>) {
           const threshold = Math.max(28, containerWidth * 0.2);
 
           if (dx > threshold) {
-            commitIndex(currentIndex - 1);
+            if (!requestSwipe(-1)) {
+              startAnimation(currentIndex, false);
+            }
+            parent?.clearPreview?.();
             return;
           }
           if (dx < -threshold) {
-            commitIndex(currentIndex + 1);
+            if (!requestSwipe(1)) {
+              startAnimation(currentIndex, false);
+            }
+            parent?.clearPreview?.();
             return;
           }
+          parent?.clearPreview?.();
           startAnimation(currentIndex, false);
         },
       });
     },
-    [commitIndex, currentIndex, layer, onSwipe, startAnimation, swipable, tabs.length],
+    [
+      currentIndex,
+      layer,
+      onSwipe,
+      parent,
+      previewSwipe,
+      requestSwipe,
+      startAnimation,
+      swipable,
+      tabs.length,
+    ],
   );
 
   const onPanelEnd = useCallback(() => {
@@ -309,7 +393,8 @@ export function Tabs<T>(props: TabsProps<T>) {
     }
     gestureManager.maybeEnd(activeGestureId.current);
     activeGestureId.current = null;
-  }, []);
+    parent?.clearPreview?.();
+  }, [parent]);
 
   const onTrackTransitionEnd = useCallback(
     (event: React.TransitionEvent<HTMLDivElement>) => {
@@ -326,14 +411,17 @@ export function Tabs<T>(props: TabsProps<T>) {
     [onAfterChange],
   );
 
-  const contextValue = useMemo<ReactAppTabsContextType>(
+  const contextValue = useMemo<InternalTabsContextType>(
     () => ({
       layer,
       activeIndex: currentIndex,
       getConfig: () => tabs[currentIndex],
       getPrevLayer: () => parent,
+      requestSwipe,
+      previewSwipe,
+      clearPreview,
     }),
-    [currentIndex, layer, parent, tabs],
+    [clearPreview, currentIndex, layer, parent, previewSwipe, requestSwipe, tabs],
   );
 
   const rootStyle: CSSProperties = {
