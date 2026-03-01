@@ -9,6 +9,7 @@ import React, {
   useRef,
   useState,
 } from 'react';
+import styles from './index.module.css';
 
 export type Key = string | number;
 
@@ -143,10 +144,20 @@ function getBarFlexDirection(direction: NonNullable<TabsProps<any>['direction']>
 }
 
 function getRootFlexDirection(direction: NonNullable<TabsProps<any>['direction']>) {
-  if (direction === 'top' || direction === 'bottom') {
+  if (direction === 'top') {
     return 'column';
   }
-  return 'row';
+  if (direction === 'bottom') {
+    return 'column-reverse';
+  }
+  if (direction === 'left') {
+    return 'row';
+  }
+  return 'row-reverse';
+}
+
+function joinClassNames(...names: Array<string | undefined>) {
+  return names.filter(Boolean).join(' ');
 }
 
 export function useReactAppTabsContext() {
@@ -425,88 +436,68 @@ export function Tabs<T>(props: TabsProps<T>) {
   );
 
   const rootStyle: CSSProperties = {
-    display: 'flex',
     flexDirection: getRootFlexDirection(direction),
-    width: '100%',
-    height: '100%',
-    minHeight: 0,
-    minWidth: 0,
-  };
-
-  const panelStyle: CSSProperties = {
-    flex: 1,
-    minWidth: 0,
-    minHeight: 0,
-    overflow: 'hidden',
-    position: 'relative',
   };
 
   const barStyle: CSSProperties = {
-    display: 'flex',
     flexDirection: getBarFlexDirection(direction),
     ...(TabBarStyle ?? {}),
   };
 
   const panelTrackStyle: CSSProperties = {
-    display: 'flex',
     width: `${tabs.length * 100}%`,
-    height: '100%',
     transform: `translate3d(calc(${-currentIndex * (100 / Math.max(tabs.length, 1))}% + ${dragOffset}px), 0, 0)`,
     transition: isAnimating ? `transform ${duration}ms ease` : undefined,
-    willChange: 'transform',
   };
 
-  const shouldBarBeforePanel = direction === 'top' || direction === 'left';
   const effectiveLazyDistance = Math.max(lazyLoadDistance, 1);
 
   return (
     <TabsContext.Provider value={contextValue}>
-      <div style={rootStyle}>
-        {shouldBarBeforePanel ? (
-          <div className={TabBarClassName} style={barStyle}>
-            {tabs.map((tab, index) => {
-              const key = keyExtractor(tab);
-              return (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => commitIndex(index)}
-                  style={{
-                    flex: fit === 'container' ? 1 : undefined,
-                    background: 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                    padding: 0,
-                  }}
-                >
-                  {TabBarItemRenderer(tab)}
-                </button>
-              );
-            })}
-          </div>
-        ) : null}
+      <div className={styles.root} style={rootStyle}>
+        <div className={joinClassNames(styles.tabBar, TabBarClassName)} style={barStyle}>
+          {tabs.map((tab, index) => {
+            const key = keyExtractor(tab);
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => commitIndex(index)}
+                className={styles.tabButton}
+                style={{
+                  flex: fit === 'container' ? 1 : undefined,
+                }}
+              >
+                {TabBarItemRenderer(tab)}
+              </button>
+            );
+          })}
+        </div>
 
         <div
           ref={containerRef}
-          style={panelStyle}
+          className={styles.panelContainer}
           onMouseDown={onPanelStart}
           onTouchStart={onPanelStart}
           onMouseUp={onPanelEnd}
           onTouchEnd={onPanelEnd}
           onTouchCancel={onPanelEnd}
         >
-          <div style={panelTrackStyle} onTransitionEnd={onTrackTransitionEnd}>
+          <div
+            className={styles.panelTrack}
+            style={panelTrackStyle}
+            onTransitionEnd={onTrackTransitionEnd}
+          >
             {tabs.map((tab, index) => {
               const key = keyExtractor(tab);
               const visible = Math.abs(index - currentIndex) <= effectiveLazyDistance;
               return (
                 <div
                   key={key}
+                  className={styles.panelItem}
                   style={{
                     width: `${100 / Math.max(tabs.length, 1)}%`,
-                    height: '100%',
                     flex: `0 0 ${100 / Math.max(tabs.length, 1)}%`,
-                    overflow: 'hidden',
                   }}
                 >
                   {visible ? TabPanelRenderer(tab) : null}
@@ -515,30 +506,6 @@ export function Tabs<T>(props: TabsProps<T>) {
             })}
           </div>
         </div>
-
-        {!shouldBarBeforePanel ? (
-          <div className={TabBarClassName} style={barStyle}>
-            {tabs.map((tab, index) => {
-              const key = keyExtractor(tab);
-              return (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => commitIndex(index)}
-                  style={{
-                    flex: fit === 'container' ? 1 : undefined,
-                    background: 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                    padding: 0,
-                  }}
-                >
-                  {TabBarItemRenderer(tab)}
-                </button>
-              );
-            })}
-          </div>
-        ) : null}
       </div>
     </TabsContext.Provider>
   );
