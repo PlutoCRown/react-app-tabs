@@ -19,15 +19,16 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: example
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
-      - name: Install deps
+      - name: Install root deps
+        run: bun install --frozen-lockfile
+      - name: Install example deps
+        working-directory: example
         run: bun install --frozen-lockfile
       - name: Build example
+        working-directory: example
         run: bun run build
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
