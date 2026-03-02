@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef } from "react";
+import React, { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { TabBarRenderMeta, TabInnerScroll, Tabs } from "../../src";
 import { levelOneTabs, levelTwoTabs, ColorTab } from "./data/tabs";
 import {
@@ -36,17 +36,16 @@ function getUnderlineStyle(
   };
 }
 
-function ThirdLevelTabs() {
-  const tabs = useMemo(() => thirdLevelTabs, []);
-  const [active, setActive] = React.useState(0);
+const ThirdLevelBar = (meta: TabBarRenderMeta<ThirdLevelTab>) => {
+  const { activeIndex } = meta;
   const barRef = useRef<HTMLDivElement | null>(null);
   const itemRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
   useEffect(() => {
-    ensureItemVisible(barRef.current, itemRefs.current[active] ?? null);
-  }, [active]);
+    ensureItemVisible(barRef.current, itemRefs.current[activeIndex] ?? null);
+  }, [activeIndex]);
 
-  const renderBar = (meta: TabBarRenderMeta<ThirdLevelTab>) => (
+  return (
     <TabInnerScroll
       ref={barRef}
       __test_name="Bar_3"
@@ -74,6 +73,11 @@ function ThirdLevelTabs() {
       ))}
     </TabInnerScroll>
   );
+};
+
+function ThirdLevelTabs() {
+  const tabs = useMemo(() => thirdLevelTabs, []);
+  const [active, setActive] = React.useState(0);
 
   return (
     <Tabs
@@ -86,89 +90,87 @@ function ThirdLevelTabs() {
         setActive(next);
         return true;
       }}
-      TabBarRenderer={renderBar}
+      TabBarRenderer={ThirdLevelBar}
       TabPanelRenderer={({ Render, color }) => <Render color={color} />}
     />
   );
 }
 
-function SecondLevelTabs() {
-  const [active, setActive] = React.useState(1);
-  const [underlineProgress, setUnderlineProgress] = React.useState(1);
-  const [underlineAnimating, setUnderlineAnimating] = React.useState(false);
+const SecondLevelBar = (meta: TabBarRenderMeta<ColorTab>) => {
+  const { activeIndex } = meta;
+
   const barRef = useRef<HTMLDivElement | null>(null);
+  const underlineRef = useRef<HTMLDivElement | null>(null);
   const itemRefs = useRef<Array<HTMLButtonElement | null>>([]);
-
   useEffect(() => {
-    ensureItemVisible(barRef.current, itemRefs.current[active] ?? null);
-  }, [active]);
+    ensureItemVisible(barRef.current, itemRefs.current[activeIndex] ?? null);
+  }, [activeIndex]);
 
-  const renderBar = (meta: TabBarRenderMeta<ColorTab>) => {
-    const underlineStyle = getUnderlineStyle(itemRefs.current, underlineProgress);
-    return (
-      <div className={styles.secondLevelCustomBar}>
-        <TabInnerScroll
-          ref={barRef}
-          __test_name="Bar_2"
-          direction="horizontal"
-          className={styles.secondLevelItemsScroller}
-        >
-          {meta.items.map((item) => (
-            <React.Fragment key={item.key}>
-              {defaultTabLabel(
-                item.tab,
-                {
-                  onClick: item.onClick,
-                  active: item.active,
-                  index: item.index,
-                },
-                (node) => {
-                  itemRefs.current[item.index] = node;
-                },
-                { showActiveUnderline: false },
-              )}
-            </React.Fragment>
-          ))}
-          {underlineStyle ? (
-            <div
-              className={styles.secondLevelUnderline}
-              style={{
-                transform: underlineStyle.transform,
-                width: underlineStyle.width,
-                transition: underlineAnimating
-                  ? 'transform 300ms ease, width 300ms ease'
-                  : undefined,
-              }}
-            />
-          ) : null}
-        </TabInnerScroll>
-        <h1 className={styles.secondLevelTitle}>React App Tab</h1>
-      </div>
-    );
-  };
+  const applyUnderline = React.useCallback(
+    (progress: number, animate: boolean) => {
+      const underline = underlineRef.current;
+      if (!underline) {
+        return;
+      }
+      const underlineStyle = getUnderlineStyle(itemRefs.current, progress);
+      if (!underlineStyle) {
+        return;
+      }
+      underline.style.transition = animate
+        ? "transform 300ms ease, width 300ms ease"
+        : "none";
+      underline.style.transform = underlineStyle.transform;
+      underline.style.width = `${underlineStyle.width}px`;
+    },
+    [],
+  );
 
+  useLayoutEffect(() => {
+    const raf = requestAnimationFrame(() => {
+      applyUnderline(activeIndex, false);
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [activeIndex, applyUnderline]);
+
+  return (
+    <div className={styles.secondLevelCustomBar}>
+      <TabInnerScroll
+        ref={barRef}
+        __test_name="Bar_2"
+        direction="horizontal"
+        className={styles.secondLevelItemsScroller}
+      >
+        {meta.items.map((item) => (
+          <React.Fragment key={item.key}>
+            {defaultTabLabel(
+              item.tab,
+              {
+                onClick: item.onClick,
+                active: item.active,
+                index: item.index,
+              },
+              (node) => {
+                itemRefs.current[item.index] = node;
+              },
+              { showActiveUnderline: false },
+            )}
+          </React.Fragment>
+        ))}
+        <div ref={underlineRef} className={styles.secondLevelUnderline} />
+      </TabInnerScroll>
+      <h1 className={styles.secondLevelTitle}>React App Tab</h1>
+    </div>
+  );
+};
+
+function SecondLevelTabs() {
   return (
     <Tabs
       __test_name="Tab_2"
       tabs={levelTwoTabs}
       keyExtractor={(tab) => tab.id}
       direction="top"
-      activeIndex={active}
-      onSwipe={(progress) => {
-        setUnderlineAnimating(false);
-        setUnderlineProgress(progress);
-      }}
-      onChange={(next) => {
-        setActive(next);
-        setUnderlineAnimating(true);
-        setUnderlineProgress(next);
-        return true;
-      }}
-      onAfterChange={(next) => {
-        setUnderlineAnimating(false);
-        setUnderlineProgress(next);
-      }}
-      TabBarRenderer={renderBar}
+      TabBarRenderer={SecondLevelBar}
       TabPanelRenderer={(tab) => {
         if (tab.id === "cyan") {
           return <ThirdLevelTabs />;

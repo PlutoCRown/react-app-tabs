@@ -59,9 +59,6 @@ function TabsInner<T>(props: TabsProps<T>, ref: React.ForwardedRef<TabsRef>) {
   const [currentIndex, setCurrentIndex] = useState(() =>
     clampIndex(activeIndex ?? defaultIndex, tabs.length),
   );
-  const [swipeProgress, setSwipeProgress] = useState(() =>
-    clampIndex(activeIndex ?? defaultIndex, tabs.length),
-  );
   const [dragOffset, setDragOffset] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
   const [, setPreviewBarIndex] = useState<number | null>(null);
@@ -80,14 +77,12 @@ function TabsInner<T>(props: TabsProps<T>, ref: React.ForwardedRef<TabsRef>) {
     if (tabs.length === 0) {
       setCurrentIndex(0);
       setInternalIndex(0);
-      setSwipeProgress(0);
       return;
     }
 
     if (isControlled) {
       const next = clampIndex(activeIndex as number, tabs.length);
       setCurrentIndex(next);
-      setSwipeProgress(next);
       setDragOffset(0);
       setPreviewBarIndex(null);
       return;
@@ -96,7 +91,6 @@ function TabsInner<T>(props: TabsProps<T>, ref: React.ForwardedRef<TabsRef>) {
     setInternalIndex((prev) => {
       const next = clampIndex(prev, tabs.length);
       setCurrentIndex(next);
-      setSwipeProgress(next);
       return next;
     });
     setDragOffset(0);
@@ -108,7 +102,6 @@ function TabsInner<T>(props: TabsProps<T>, ref: React.ForwardedRef<TabsRef>) {
       setDragOffset(0);
       setPreviewBarIndex(null);
       setCurrentIndex(targetIndex);
-      setSwipeProgress(targetIndex);
       if (duration <= 0) {
         setIsAnimating(false);
         if (shouldTriggerAfterChange) {
@@ -161,10 +154,9 @@ function TabsInner<T>(props: TabsProps<T>, ref: React.ForwardedRef<TabsRef>) {
 
   const clearPreview = useCallback(() => {
     setDragOffset(0);
-    setSwipeProgress(currentIndex);
     setPreviewBarIndex(null);
     parent?.clearPreview?.();
-  }, [currentIndex, parent]);
+  }, [parent]);
 
   const previewSwipe = useCallback(
     (dx: number) => {
@@ -174,7 +166,6 @@ function TabsInner<T>(props: TabsProps<T>, ref: React.ForwardedRef<TabsRef>) {
       const rawProgress =
         containerWidth > 0 ? currentIndex - dx / containerWidth : currentIndex;
       const nextProgress = Math.min(tabs.length - 1, Math.max(0, rawProgress));
-      setSwipeProgress(nextProgress);
       onSwipe?.(nextProgress);
       if (dx > 16) {
         setPreviewBarIndex(currentIndex - 1);
@@ -249,23 +240,24 @@ function TabsInner<T>(props: TabsProps<T>, ref: React.ForwardedRef<TabsRef>) {
         },
         onEnd: (dx) => {
           activeGestureId.current = null;
+          const shouldNotifySettle = movedOnceRef.current;
           movedOnceRef.current = false;
           repickSentRef.current = false;
           const containerWidth = containerRef.current?.clientWidth ?? 0;
           const threshold = Math.max(28, containerWidth * 0.2);
           if (dx > threshold) {
             if (!commitIndex(currentIndex - 1)) {
-              startAnimation(currentIndex, false);
+              startAnimation(currentIndex, shouldNotifySettle);
             }
             return;
           }
           if (dx < -threshold) {
             if (!commitIndex(currentIndex + 1)) {
-              startAnimation(currentIndex, false);
+              startAnimation(currentIndex, shouldNotifySettle);
             }
             return;
           }
-          startAnimation(currentIndex, false);
+          startAnimation(currentIndex, shouldNotifySettle);
         },
       });
     },
@@ -358,6 +350,18 @@ function TabsInner<T>(props: TabsProps<T>, ref: React.ForwardedRef<TabsRef>) {
     transform: `translate3d(calc(${-currentIndex * 100}% + ${dragOffset}px), 0, 0)`,
     transition: isAnimating ? `transform ${duration}ms ease` : undefined,
   };
+
+  const swipeProgress =
+    tabs.length > 0
+      ? (() => {
+          const containerWidth = containerRef.current?.clientWidth ?? 0;
+          const rawProgress =
+            containerWidth > 0
+              ? currentIndex - dragOffset / containerWidth
+              : currentIndex;
+          return Math.min(tabs.length - 1, Math.max(0, rawProgress));
+        })()
+      : 0;
 
   const effectiveLazyDistance = Math.max(lazyLoadDistance, 1);
   const defaultBarProps = props as TabsWithDefaultBarProps<T>;
