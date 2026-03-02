@@ -5,6 +5,7 @@ import React, {
   useContext,
   useEffect,
   useImperativeHandle,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -60,11 +61,11 @@ function TabsInner<T>(props: TabsProps<T>, ref: React.ForwardedRef<TabsRef>) {
   const [currentIndex, setCurrentIndex] = useState(() =>
     clampIndex(activeIndex ?? defaultIndex, tabs.length),
   );
-  const [dragOffset, setDragOffset] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
-  const [, setPreviewBarIndex] = useState<number | null>(null);
 
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const panelTrackRef = useRef<HTMLDivElement | null>(null);
+  const dragOffsetRef = useRef(0);
   const activeGestureId = useRef<number | null>(null);
   const pendingAfterChangeIndex = useRef<number | null>(null);
   const movedOnceRef = useRef(false);
@@ -74,6 +75,21 @@ function TabsInner<T>(props: TabsProps<T>, ref: React.ForwardedRef<TabsRef>) {
     onSwipe?: (progress: number) => void;
     onChange?: (activeIndex: number) => void;
   }>({});
+
+  const applyTrackTransform = useCallback(
+    (offsetPx: number, transitionDurationMs: number) => {
+      const track = panelTrackRef.current;
+      if (!track) {
+        return;
+      }
+      track.style.transition =
+        transitionDurationMs > 0
+          ? `transform ${transitionDurationMs}ms ease`
+          : "none";
+      track.style.transform = `translate3d(calc(${-currentIndex * 100}% + ${offsetPx}px), 0, 0)`;
+    },
+    [currentIndex],
+  );
 
   useEffect(() => {
     gestureManager.ensureListeners();
@@ -89,8 +105,7 @@ function TabsInner<T>(props: TabsProps<T>, ref: React.ForwardedRef<TabsRef>) {
     if (isControlled) {
       const next = clampIndex(activeIndex as number, tabs.length);
       setCurrentIndex(next);
-      setDragOffset(0);
-      setPreviewBarIndex(null);
+      dragOffsetRef.current = 0;
       return;
     }
 
@@ -99,8 +114,7 @@ function TabsInner<T>(props: TabsProps<T>, ref: React.ForwardedRef<TabsRef>) {
       setCurrentIndex(next);
       return next;
     });
-    setDragOffset(0);
-    setPreviewBarIndex(null);
+    dragOffsetRef.current = 0;
   }, [activeIndex, isControlled, tabs.length]);
 
   const startAnimation = useCallback(
@@ -109,8 +123,8 @@ function TabsInner<T>(props: TabsProps<T>, ref: React.ForwardedRef<TabsRef>) {
       shouldTriggerAfterChange: boolean,
       transitionDuration: number,
     ) => {
-      setDragOffset(0);
-      setPreviewBarIndex(null);
+      console.log("触发");
+      dragOffsetRef.current = 0;
       setCurrentIndex(targetIndex);
       if (transitionDuration <= 0) {
         setIsAnimating(false);
@@ -130,7 +144,8 @@ function TabsInner<T>(props: TabsProps<T>, ref: React.ForwardedRef<TabsRef>) {
 
   const commitIndex = useCallback(
     (nextIndex: number, trigger: "swipe" | "switch" = "swipe") => {
-      const transitionDuration = trigger === "switch" ? switchDuration : duration;
+      const transitionDuration =
+        trigger === "switch" ? switchDuration : duration;
       const normalizedNext = clampIndex(nextIndex, tabs.length);
       const prev = currentIndex;
       if (normalizedNext === prev) {
@@ -174,31 +189,25 @@ function TabsInner<T>(props: TabsProps<T>, ref: React.ForwardedRef<TabsRef>) {
   );
 
   const clearPreview = useCallback(() => {
-    setDragOffset(0);
-    setPreviewBarIndex(null);
+    dragOffsetRef.current = 0;
+    applyTrackTransform(0, 0);
     parent?.clearPreview?.();
-  }, [parent]);
+  }, [applyTrackTransform, parent]);
 
   const previewSwipe = useCallback(
     (dx: number) => {
       setIsAnimating(false);
-      setDragOffset(dx);
+      dragOffsetRef.current = dx;
+      applyTrackTransform(dx, 0);
       const containerWidth = containerRef.current?.clientWidth ?? 0;
       const rawProgress =
         containerWidth > 0 ? currentIndex - dx / containerWidth : currentIndex;
       const nextProgress = Math.min(tabs.length - 1, Math.max(0, rawProgress));
       tabBarCallbackRef.current.onSwipe?.(nextProgress);
       onSwipe?.(nextProgress);
-      if (dx > 16) {
-        setPreviewBarIndex(currentIndex - 1);
-      } else if (dx < -16) {
-        setPreviewBarIndex(currentIndex + 1);
-      } else {
-        setPreviewBarIndex(currentIndex);
-      }
       return "self";
     },
-    [currentIndex, onSwipe, parent, tabs.length],
+    [applyTrackTransform, currentIndex, onSwipe, parent, tabs.length],
   );
 
   const onPanelStart = useCallback(
@@ -235,8 +244,8 @@ function TabsInner<T>(props: TabsProps<T>, ref: React.ForwardedRef<TabsRef>) {
         onStart: () => {
           pendingAfterChangeIndex.current = null;
           setIsAnimating(false);
-          setDragOffset(0);
-          setPreviewBarIndex(currentIndex);
+          dragOffsetRef.current = 0;
+          applyTrackTransform(0, 0);
           movedOnceRef.current = false;
           repickSentRef.current = false;
         },
@@ -257,8 +266,8 @@ function TabsInner<T>(props: TabsProps<T>, ref: React.ForwardedRef<TabsRef>) {
             return;
           }
           setIsAnimating(false);
-          setDragOffset(dx * 0.35);
-          setPreviewBarIndex(currentIndex);
+          dragOffsetRef.current = dx * 0.35;
+          applyTrackTransform(dx * 0.35, 0);
         },
         onEnd: (dx, _dy, dvx) => {
           activeGestureId.current = null;
@@ -297,6 +306,7 @@ function TabsInner<T>(props: TabsProps<T>, ref: React.ForwardedRef<TabsRef>) {
       swipable,
       tabs.length,
       duration,
+      applyTrackTransform,
     ],
   );
 
@@ -375,10 +385,6 @@ function TabsInner<T>(props: TabsProps<T>, ref: React.ForwardedRef<TabsRef>) {
   const panelTrackStyle: CSSProperties = {
     ...fixedSizeStyle,
     ...flexSizeStyle,
-    transform: `translate3d(calc(${-currentIndex * 100}% + ${dragOffset}px), 0, 0)`,
-    transition: isAnimating
-      ? `transform ${animationDurationRef.current}ms ease`
-      : undefined,
   };
 
   const swipeProgress =
@@ -387,11 +393,18 @@ function TabsInner<T>(props: TabsProps<T>, ref: React.ForwardedRef<TabsRef>) {
           const containerWidth = containerRef.current?.clientWidth ?? 0;
           const rawProgress =
             containerWidth > 0
-              ? currentIndex - dragOffset / containerWidth
+              ? currentIndex - dragOffsetRef.current / containerWidth
               : currentIndex;
           return Math.min(tabs.length - 1, Math.max(0, rawProgress));
         })()
       : 0;
+
+  useLayoutEffect(() => {
+    applyTrackTransform(
+      dragOffsetRef.current,
+      isAnimating ? animationDurationRef.current : 0,
+    );
+  }, [applyTrackTransform, currentIndex, isAnimating]);
 
   const effectiveLazyDistance = Math.max(lazyLoadDistance, 1);
   const defaultBarProps = props as TabsWithDefaultBarProps<T>;
@@ -475,6 +488,7 @@ function TabsInner<T>(props: TabsProps<T>, ref: React.ForwardedRef<TabsRef>) {
           onTouchCancel={onPanelEnd}
         >
           <div
+            ref={panelTrackRef}
             className={styles.panelTrack}
             style={panelTrackStyle}
             onTransitionEnd={onTrackTransitionEnd}
