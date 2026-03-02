@@ -74,8 +74,8 @@ function registerInnerScrollCandidatesForTarget(target: Element | null) {
                 }
                 return { accept: true, reason: '可继续滚动' };
               },
-              onMove: (_dx, _dy, _requestRepick) => {},
-              onEnd: () => {},
+              onMove: (_dx, _dy, _requestRepick) => { },
+              onEnd: () => { },
             });
           }
         }
@@ -152,12 +152,12 @@ function dispatchMove(point: { x: number; y: number }) {
     session.repickRequested = false;
     const { owner: nextOwner, flow } = pickOwner(dx, dy);
     assignOwner(nextOwner, dx, dy);
-    if (flow.length > 0) {
-      console.log('[react-app-tabs][manager] 手势决策', {
-        flow,
-        result: nextOwner ? `${nextOwner.name} 接管` : 'InnerScroll 接管',
-      });
-    }
+    // if (flow.length > 0) {
+    //   console.log('[react-app-tabs][manager] 手势决策', {
+    //     flow,
+    //     result: nextOwner ? `${nextOwner.name} 接管` : 'InnerScroll 接管',
+    //   });
+    // }
   }
 
   const owner = getOwnerCandidate();
