@@ -25,14 +25,14 @@ export const guideTabs: GuideTab[] = [
   {
     id: "guide-2",
     name: "Guide-2",
-    title: "基础",
+    title: "基础用法",
     color: "#4bc7ff",
     Render: Guide2,
   },
   {
     id: "guide-3",
     name: "Guide-3",
-    title: "自定义栏",
+    title: "自定义TabBar",
     color: "#7d9dff",
     Render: Guide3,
   },
@@ -46,14 +46,14 @@ export const guideTabs: GuideTab[] = [
   {
     id: "guide-5",
     name: "Guide-5",
-    title: "参数",
+    title: "其他参数",
     color: "#48c88f",
     Render: Guide5,
   },
   {
     id: "guide-6",
     name: "Guide-6",
-    title: "结束",
+    title: "最后一页",
     color: "#ff9f62",
     Render: Guide6,
   },

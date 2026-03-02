@@ -139,9 +139,11 @@
   0% {
     filter: brightness(1);
   }
+
   50% {
     filter: brightness(0.92);
   }
+
   100% {
     filter: brightness(1);
   }
@@ -155,12 +157,15 @@
 
 .dirPanelInner {
   padding: 2.5em;
-  display: grid;
   gap: 20px;
   padding-bottom: 6.8em;
+  display: flex;
+  flex-direction: column;
 }
 
 .dirSection {
+  flex-shrink: 1;
+  min-width: 0;
   border-radius: 14px;
   border: 1px solid #d8e4f7;
   background: #ffffffcc;
@@ -229,7 +234,7 @@
   color: #1c2d45;
 }
 
-.cyanSection .cyanParagraph + .cyanParagraph {
+.cyanSection .cyanParagraph+.cyanParagraph {
   margin-top: 8px;
 }
 

@@ -25,7 +25,8 @@ const dirDemoTabs: ColorTab[] = [
   { id: "leaf", name: "Leaf", color: "#61cf93" },
 ];
 
-const dirDirections: TabDirection[] = ["right"];
+// const dirDirections: TabDirection[] = ["right"];
+const dirDirections: TabDirection[] = ["top", "right", "left"];
 
 const feedLeftHeights = [80, 112, 92, 130, 88, 120, 96, 122].map(
   (i) => i * 1.6,
