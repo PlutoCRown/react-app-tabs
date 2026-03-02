@@ -74,8 +74,11 @@ type TabBarRenderItem<T> = {
 type TabBarRenderMeta<T> = {
   items: TabBarRenderItem<T>[];
   activeIndex: number;
+  swipeProgress: number;
   direction: 'bottom' | 'left' | 'right' | 'top';
   fit: 'container' | 'content';
+  onSwipe?: (progress: number) => void;
+  onChange?: (activeIndex: number) => void;
 };
 
 type Props<T> = {
@@ -83,7 +86,7 @@ type Props<T> = {
   keyExtractor: (tab: TabItem<T>) => Key;
   TabPanelRenderer: (tab: TabItem<T>) => React.ReactNode;
 
-  onSwipe?: () => void;
+  onSwipe?: (progress: number) => void;
   onChange?: (nextIndex: number, prevIndex: number) => undefined | boolean;
   onAfterChange?: (activeIndex: number) => void;
 

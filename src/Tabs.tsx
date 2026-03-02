@@ -8,18 +8,23 @@ import React, {
   useMemo,
   useRef,
   useState,
-} from 'react';
-import { TabsContext, useReactAppTabsContext } from './context';
-import { gestureManager } from './gesture-manager';
-import styles from './index.module.css';
+} from "react";
+import { TabsContext, useReactAppTabsContext } from "./context";
+import { gestureManager } from "./gesture-manager";
+import styles from "./index.module.css";
 import type {
   InternalTabsContextType,
   TabBarRenderItem,
   TabsProps,
   TabsRef,
   TabsWithDefaultBarProps,
-} from './types';
-import { clampIndex, getBarFlexDirection, getRootFlexDirection, joinClassNames } from './utils';
+} from "./types";
+import {
+  clampIndex,
+  getBarFlexDirection,
+  getRootFlexDirection,
+  joinClassNames,
+} from "./utils";
 
 let globalGestureId = 1;
 
@@ -37,19 +42,24 @@ function TabsInner<T>(props: TabsProps<T>, ref: React.ForwardedRef<TabsRef>) {
     defaultIndex = 0,
     activeIndex,
     swipable = true,
-    fit = 'container',
-    direction = 'bottom',
+    fit = "container",
+    direction = "bottom",
     lazyLoadDistance = 1,
     duration = 300,
-    TabBarRenderer
+    TabBarRenderer,
   } = props;
 
   const parent = useContext(TabsContext);
   const layer = (parent?.layer ?? -1) + 1;
   const isControlled = activeIndex !== undefined;
 
-  const [internalIndex, setInternalIndex] = useState(() => clampIndex(defaultIndex, tabs.length));
+  const [internalIndex, setInternalIndex] = useState(() =>
+    clampIndex(defaultIndex, tabs.length),
+  );
   const [currentIndex, setCurrentIndex] = useState(() =>
+    clampIndex(activeIndex ?? defaultIndex, tabs.length),
+  );
+  const [swipeProgress, setSwipeProgress] = useState(() =>
     clampIndex(activeIndex ?? defaultIndex, tabs.length),
   );
   const [dragOffset, setDragOffset] = useState(0);
@@ -70,12 +80,14 @@ function TabsInner<T>(props: TabsProps<T>, ref: React.ForwardedRef<TabsRef>) {
     if (tabs.length === 0) {
       setCurrentIndex(0);
       setInternalIndex(0);
+      setSwipeProgress(0);
       return;
     }
 
     if (isControlled) {
       const next = clampIndex(activeIndex as number, tabs.length);
       setCurrentIndex(next);
+      setSwipeProgress(next);
       setDragOffset(0);
       setPreviewBarIndex(null);
       return;
@@ -84,6 +96,7 @@ function TabsInner<T>(props: TabsProps<T>, ref: React.ForwardedRef<TabsRef>) {
     setInternalIndex((prev) => {
       const next = clampIndex(prev, tabs.length);
       setCurrentIndex(next);
+      setSwipeProgress(next);
       return next;
     });
     setDragOffset(0);
@@ -95,6 +108,7 @@ function TabsInner<T>(props: TabsProps<T>, ref: React.ForwardedRef<TabsRef>) {
       setDragOffset(0);
       setPreviewBarIndex(null);
       setCurrentIndex(targetIndex);
+      setSwipeProgress(targetIndex);
       if (duration <= 0) {
         setIsAnimating(false);
         if (shouldTriggerAfterChange) {
@@ -102,7 +116,9 @@ function TabsInner<T>(props: TabsProps<T>, ref: React.ForwardedRef<TabsRef>) {
         }
         return;
       }
-      pendingAfterChangeIndex.current = shouldTriggerAfterChange ? targetIndex : null;
+      pendingAfterChangeIndex.current = shouldTriggerAfterChange
+        ? targetIndex
+        : null;
       setIsAnimating(true);
     },
     [duration, onAfterChange],
@@ -145,14 +161,21 @@ function TabsInner<T>(props: TabsProps<T>, ref: React.ForwardedRef<TabsRef>) {
 
   const clearPreview = useCallback(() => {
     setDragOffset(0);
+    setSwipeProgress(currentIndex);
     setPreviewBarIndex(null);
     parent?.clearPreview?.();
-  }, [parent]);
+  }, [currentIndex, parent]);
 
   const previewSwipe = useCallback(
     (dx: number) => {
       setIsAnimating(false);
       setDragOffset(dx);
+      const containerWidth = containerRef.current?.clientWidth ?? 0;
+      const rawProgress =
+        containerWidth > 0 ? currentIndex - dx / containerWidth : currentIndex;
+      const nextProgress = Math.min(tabs.length - 1, Math.max(0, rawProgress));
+      setSwipeProgress(nextProgress);
+      onSwipe?.(nextProgress);
       if (dx > 16) {
         setPreviewBarIndex(currentIndex - 1);
       } else if (dx < -16) {
@@ -160,9 +183,9 @@ function TabsInner<T>(props: TabsProps<T>, ref: React.ForwardedRef<TabsRef>) {
       } else {
         setPreviewBarIndex(currentIndex);
       }
-      return 'self';
+      return "self";
     },
-    [currentIndex, parent, tabs.length],
+    [currentIndex, onSwipe, parent, tabs.length],
   );
 
   const onPanelStart = useCallback(
@@ -180,21 +203,21 @@ function TabsInner<T>(props: TabsProps<T>, ref: React.ForwardedRef<TabsRef>) {
         layer,
         canHandle: (dx, dy) => {
           if (Math.abs(dx) < Math.abs(dy)) {
-            return { accept: false, reason: '纵向位移更大' };
+            return { accept: false, reason: "纵向位移更大" };
           }
           if (dx > 0) {
             if (currentIndex > 0) {
-              return { accept: true, reason: '可向前切换' };
+              return { accept: true, reason: "可向前切换" };
             }
-            return { accept: false, reason: '已在首项' };
+            return { accept: false, reason: "已在首项" };
           }
           if (dx < 0) {
             if (currentIndex < tabs.length - 1) {
-              return { accept: true, reason: '可向后切换' };
+              return { accept: true, reason: "可向后切换" };
             }
-            return { accept: false, reason: '已在末项' };
+            return { accept: false, reason: "已在末项" };
           }
-          return { accept: true, reason: '等待方向确认' };
+          return { accept: true, reason: "等待方向确认" };
         },
         onStart: () => {
           pendingAfterChangeIndex.current = null;
@@ -205,16 +228,19 @@ function TabsInner<T>(props: TabsProps<T>, ref: React.ForwardedRef<TabsRef>) {
           repickSentRef.current = false;
         },
         onMove: (dx, _dy, requestRepick) => {
-          onSwipe?.();
           if (Math.abs(dx) > 12) {
             movedOnceRef.current = true;
           }
-          if (!repickSentRef.current && movedOnceRef.current && Math.abs(dx) <= 4) {
+          if (
+            !repickSentRef.current &&
+            movedOnceRef.current &&
+            Math.abs(dx) <= 4
+          ) {
             repickSentRef.current = true;
             requestRepick();
           }
           const previewMode = previewSwipe(dx);
-          if (previewMode === 'self') {
+          if (previewMode === "self") {
             return;
           }
           setIsAnimating(false);
@@ -227,7 +253,6 @@ function TabsInner<T>(props: TabsProps<T>, ref: React.ForwardedRef<TabsRef>) {
           repickSentRef.current = false;
           const containerWidth = containerRef.current?.clientWidth ?? 0;
           const threshold = Math.max(28, containerWidth * 0.2);
-
           if (dx > threshold) {
             if (!commitIndex(currentIndex - 1)) {
               startAnimation(currentIndex, false);
@@ -268,7 +293,7 @@ function TabsInner<T>(props: TabsProps<T>, ref: React.ForwardedRef<TabsRef>) {
 
   const onTrackTransitionEnd = useCallback(
     (event: React.TransitionEvent<HTMLDivElement>) => {
-      if (event.propertyName !== 'transform') {
+      if (event.propertyName !== "transform") {
         return;
       }
       setIsAnimating(false);
@@ -291,25 +316,40 @@ function TabsInner<T>(props: TabsProps<T>, ref: React.ForwardedRef<TabsRef>) {
       previewSwipe,
       clearPreview,
     }),
-    [clearPreview, currentIndex, layer, parent, previewSwipe, requestSwipe, tabs],
+    [
+      clearPreview,
+      currentIndex,
+      layer,
+      parent,
+      previewSwipe,
+      requestSwipe,
+      tabs,
+    ],
   );
 
   const rootStyle: CSSProperties = {
-    flexDirection: getRootFlexDirection(direction)
+    flexDirection: getRootFlexDirection(direction),
   };
-  const isTopOrBottom = direction === 'top' || direction === 'bottom';
-  const fixedDir: 'width' | 'height' = isTopOrBottom ? 'width' : 'height';
-  const flexDir: 'width' | 'height' = isTopOrBottom ? 'height' : 'width';
-  const fixedSizeStyle: CSSProperties = { [fixedDir]: '100%' };
-  const flexSizeStyle: CSSProperties = fit === 'container' ? { [flexDir]: '100%' } : {};
+  const isTopOrBottom = direction === "top" || direction === "bottom";
+  const fixedDir: "width" | "height" = isTopOrBottom ? "width" : "height";
+  const flexDir: "width" | "height" = isTopOrBottom ? "height" : "width";
+  const fixedSizeStyle: CSSProperties = { [fixedDir]: "100%" };
+  const flexSizeStyle: CSSProperties =
+    fit === "container" ? { [flexDir]: "100%" } : {};
   const panelContainerStyle: CSSProperties =
-    fit === 'container'
-      ? { flex: 1, minWidth: 0, minHeight: 0, ...fixedSizeStyle, ...flexSizeStyle, }
-      : { ...fixedSizeStyle, };
+    fit === "container"
+      ? {
+          flex: 1,
+          minWidth: 0,
+          minHeight: 0,
+          ...fixedSizeStyle,
+          ...flexSizeStyle,
+        }
+      : { ...fixedSizeStyle };
 
   const barStyle: CSSProperties = {
     flexDirection: getBarFlexDirection(direction),
-    ...(('TabBarStyle' in props ? props.TabBarStyle : undefined) ?? {}),
+    ...(("TabBarStyle" in props ? props.TabBarStyle : undefined) ?? {}),
   };
 
   const panelTrackStyle: CSSProperties = {
@@ -344,12 +384,26 @@ function TabsInner<T>(props: TabsProps<T>, ref: React.ForwardedRef<TabsRef>) {
 
   return (
     <TabsContext.Provider value={contextValue}>
-      <div className={styles.root} style={{ ...rootStyle, ...fixedSizeStyle, ...flexSizeStyle }}>
+      <div
+        className={styles.root}
+        style={{ ...rootStyle, ...fixedSizeStyle, ...flexSizeStyle }}
+      >
         {TabBarRenderer ? (
-          TabBarRenderer({ items: tabBarItems, activeIndex: currentIndex, direction, fit, })
+          TabBarRenderer({
+            items: tabBarItems,
+            activeIndex: currentIndex,
+            swipeProgress,
+            direction,
+            fit,
+            onSwipe,
+            onChange: onAfterChange,
+          })
         ) : (
           <div
-            className={joinClassNames(styles.tabBar, defaultBarProps.TabBarClassName)}
+            className={joinClassNames(
+              styles.tabBar,
+              defaultBarProps.TabBarClassName,
+            )}
             style={barStyle}
           >
             {tabBarItems.map((item) => (
@@ -377,12 +431,17 @@ function TabsInner<T>(props: TabsProps<T>, ref: React.ForwardedRef<TabsRef>) {
           >
             {tabs.map((tab, index) => {
               const key = keyExtractor(tab);
-              const visible = Math.abs(index - currentIndex) <= effectiveLazyDistance;
+              const visible =
+                Math.abs(index - currentIndex) <= effectiveLazyDistance;
               return (
                 <div
                   key={key}
                   className={styles.panelItem}
-                  style={{ ...fixedSizeStyle, ...flexSizeStyle, flex: fit === 'container' ? '0 0 100%' : '0 0 auto', }}
+                  style={{
+                    ...fixedSizeStyle,
+                    ...flexSizeStyle,
+                    flex: fit === "container" ? "0 0 100%" : "0 0 auto",
+                  }}
                 >
                   {visible ? TabPanelRenderer(tab) : null}
                 </div>

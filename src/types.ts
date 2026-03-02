@@ -25,8 +25,11 @@ export type TabBarRenderItem<T> = {
 export type TabBarRenderMeta<T> = {
   items: TabBarRenderItem<T>[];
   activeIndex: number;
+  swipeProgress: number;
   direction: TabDirection;
   fit: TabFit;
+  onSwipe?: (progress: number) => void;
+  onChange?: (activeIndex: number) => void;
 };
 
 export type TabsBaseProps<T> = {
@@ -34,7 +37,7 @@ export type TabsBaseProps<T> = {
   tabs: TabItem<T>[];
   keyExtractor: (tab: TabItem<T>) => Key;
   TabPanelRenderer: (tab: TabItem<T>) => ReactNode;
-  onSwipe?: () => void;
+  onSwipe?: (progress: number) => void;
   onChange?: (nextIndex: number, prevIndex: number) => undefined | boolean;
   onAfterChange?: (activeIndex: number) => void;
   defaultIndex?: number;

@@ -7,8 +7,10 @@ export function defaultTabLabel(
   tab: ColorTab,
   meta: TabBarItemRenderMeta,
   ref?: React.Ref<HTMLButtonElement>,
+  options?: { showActiveUnderline?: boolean },
 ) {
   const { active, onClick } = meta;
+  const showActiveUnderline = options?.showActiveUnderline ?? true;
   return (
     <button
       ref={ref}
@@ -17,7 +19,7 @@ export function defaultTabLabel(
       className={styles.defaultTabButton}
       style={{
         opacity: active ? 1 : 0.55,
-        borderBottom: active ? '2px solid #0e1116' : '2px solid transparent',
+        borderBottom: showActiveUnderline && active ? '2px solid #0e1116' : '2px solid transparent',
       }}
     >
       {tab.name}
