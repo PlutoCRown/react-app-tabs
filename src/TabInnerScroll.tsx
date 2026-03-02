@@ -3,6 +3,7 @@ import React, {
   ElementType,
   ForwardedRef,
   ReactElement,
+  UIEvent,
   Ref,
   forwardRef,
   useContext,
@@ -17,6 +18,8 @@ import { gestureManager } from "./gesture-manager";
 type TabInnerScrollOwnProps = {
   __test_name?: string;
   direction?: "vertical" | "horizontal";
+  /** 开启后，滚动到边界会主动触发手势 owner 重选 */
+  coherent?: boolean;
   /** 用于关闭对外接管。这下你不能从元素内滑动到外面了 */
   stopPropagation?: boolean;
 };
@@ -25,9 +28,9 @@ export type TabInnerScrollProps<T extends ElementType = "div"> =
   TabInnerScrollOwnProps & {
     as?: T;
   } & Omit<
-    React.ComponentPropsWithoutRef<T>,
-    keyof TabInnerScrollOwnProps | "as"
-  >;
+      React.ComponentPropsWithoutRef<T>,
+      keyof TabInnerScrollOwnProps | "as"
+    >;
 
 type TabInnerScrollComponent = <T extends ElementType = "div">(
   props: TabInnerScrollProps<T> & {
@@ -58,6 +61,7 @@ function TabInnerScrollInner<T extends ElementType = "div">(
     as,
     __test_name,
     direction = "vertical",
+    coherent,
     style,
     stopPropagation,
     ...rest
@@ -67,6 +71,62 @@ function TabInnerScrollInner<T extends ElementType = "div">(
   const ref = useRef<HTMLElement | null>(null);
   const rawId = useId();
   const id = useMemo(() => rawId.replace(/:/g, "_"), [rawId]);
+  const edgeRef = useRef<"none" | "start" | "end">("none");
+
+  const restWithScroll = rest as {
+    onScroll?: (event: UIEvent<HTMLElement>) => void;
+  };
+
+  const onManagedScroll = (event: UIEvent<HTMLElement>) => {
+    restWithScroll.onScroll?.(event);
+    if (!coherent || !context) {
+      return;
+    }
+    const element = event.currentTarget;
+    const threshold = 1;
+    if (direction === "horizontal") {
+      const maxScrollLeft = Math.max(
+        0,
+        element.scrollWidth - element.clientWidth,
+      );
+      if (maxScrollLeft <= 0) {
+        edgeRef.current = "none";
+        return;
+      }
+      const atStart = element.scrollLeft <= threshold;
+      const atEnd = element.scrollLeft >= maxScrollLeft - threshold;
+      const nextEdge: "none" | "start" | "end" = atStart
+        ? "start"
+        : atEnd
+          ? "end"
+          : "none";
+      if (nextEdge !== "none" && nextEdge !== edgeRef.current) {
+        gestureManager.requestRepick(id);
+      }
+      edgeRef.current = nextEdge;
+      return;
+    }
+
+    const maxScrollTop = Math.max(
+      0,
+      element.scrollHeight - element.clientHeight,
+    );
+    if (maxScrollTop <= 0) {
+      edgeRef.current = "none";
+      return;
+    }
+    const atTop = element.scrollTop <= threshold;
+    const atBottom = element.scrollTop >= maxScrollTop - threshold;
+    const nextEdge: "none" | "start" | "end" = atTop
+      ? "start"
+      : atBottom
+        ? "end"
+        : "none";
+    if (nextEdge !== "none" && nextEdge !== edgeRef.current) {
+      gestureManager.requestRepick(id);
+    }
+    edgeRef.current = nextEdge;
+  };
 
   useEffect(() => {
     if (!context) {
@@ -136,6 +196,7 @@ function TabInnerScrollInner<T extends ElementType = "div">(
           setRef(forwardedRef, node as HTMLElement | null);
         }}
         {...(rest as object)}
+        onScroll={onManagedScroll}
         style={style}
       />
     );
@@ -165,6 +226,7 @@ function TabInnerScrollInner<T extends ElementType = "div">(
       }}
       data-tab-inner-scroll-id={id}
       {...(rest as object)}
+      onScroll={onManagedScroll}
       style={managedStyle}
     />
   );

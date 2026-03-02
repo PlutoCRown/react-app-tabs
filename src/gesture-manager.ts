@@ -274,6 +274,22 @@ export const gestureManager = {
     innerScrollRegistry.delete(id);
   },
 
+  requestRepick(id: string) {
+    if (!session) {
+      return;
+    }
+    const ownerId = `inner:${id}`;
+    if (session.ownerId !== ownerId) {
+      return;
+    }
+
+    session.repickRequested = true;
+    const dx = session.currentX - session.startX;
+    const dy = session.currentY - session.startY;
+    const { owner: nextOwner } = pickOwner(dx, dy);
+    assignOwner(nextOwner, dx, dy);
+  },
+
   maybeEnd(id: number) {
     if (!session || session.ownerId !== id) {
       return;

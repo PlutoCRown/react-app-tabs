@@ -51,6 +51,7 @@ const ThirdLevelBar = (meta: TabBarRenderMeta<ThirdLevelTab>) => {
       __test_name="Bar_3"
       direction="horizontal"
       className={styles.thirdLevelBar}
+      coherent
     >
       {meta.items.map((item) => (
         <button
