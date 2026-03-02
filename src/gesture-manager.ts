@@ -129,11 +129,11 @@ function pickOwner(dx: number, dy: number) {
   for (const candidate of candidates) {
   const decision = candidate.canHandle(dx, dy);
     if (!decision.accept) {
-      flow.push(`触碰事件交给${candidate.name}，拒绝接管（${decision.reason}）`);
+      flow.push(`触碰事件交给 ${candidate.name}，拒绝接管（${decision.reason}）`);
       continue;
     }
 
-    flow.push(`触碰事件交给${candidate.name}，同意滚动（${decision.reason}）`);
+    flow.push(`触碰事件交给 ${candidate.name}，同意滚动（${decision.reason}）`);
     owner = candidate;
     break;
   }

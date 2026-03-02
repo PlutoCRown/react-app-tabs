@@ -85,7 +85,10 @@ function FeedPanel() {
 
 function DirPanel() {
   return (
-    <TabInnerScroll direction="vertical" className={styles.dirPanelScroll}>
+    <TabInnerScroll direction="vertical" className={styles.dirPanelScroll} __test_name="Dir_scroller">
+      <h2 style={{ padding: "1em", marginBottom: 0 }}>
+        各方向测试 & 同方向Scroller+Tab交替使用
+      </h2>
       <div className={styles.dirPanelInner}>
         {dirDirections.map((direction) => (
           <section key={direction} className={styles.dirSection}>
@@ -93,9 +96,11 @@ function DirPanel() {
             <div className={styles.dirTabsDemo}>
               <Tabs
                 tabs={dirDemoTabs}
+                __test_name={`Direction-${direction}`}
                 keyExtractor={(tab) => `${direction}-${tab.id}`}
                 direction={direction}
                 defaultIndex={0}
+                switchDuration={300}
                 TabBarItemRenderer={(tab, meta) => (
                   <button
                     type="button"

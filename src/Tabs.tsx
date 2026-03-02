@@ -291,8 +291,8 @@ function TabsInner<T>(props: TabsProps<T>, ref: React.ForwardedRef<TabsRef>) {
           const containerSize = isHorizontalSwipe
             ? containerRef.current?.clientWidth ?? 0
             : containerRef.current?.clientHeight ?? 0;
-          const threshold = Math.max(28, containerSize * 0.4);
-          const mixedDelta = mainDelta + (mainVelocity * containerSize) / 2;
+          const threshold = Math.max(28, containerSize * 0.2);
+          const mixedDelta = mainDelta + (mainVelocity * 400);
           if (mixedDelta > threshold) {
             if (!commitIndex(currentIndex - 1, "swipe")) {
               startAnimation(currentIndex, shouldNotifySettle, duration);

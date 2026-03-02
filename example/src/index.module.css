@@ -156,7 +156,7 @@
 }
 
 .dirPanelInner {
-  padding: 2.5em;
+  padding-inline: 1.5em;
   gap: 20px;
   padding-bottom: 6.8em;
   display: flex;
