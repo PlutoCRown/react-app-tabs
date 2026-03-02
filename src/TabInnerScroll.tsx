@@ -19,6 +19,8 @@ type TabInnerScrollOwnProps = {
   direction?: "vertical" | "horizontal";
   /** 用于关闭对外接管。这下你不能从元素内滑动到外面了 */
   stopPropagation?: boolean;
+  /** 严格模式：启用后可以在惯性滚动中截停，但是在性能低的情况下可能导致元素闪烁 */
+  strictMode?: boolean
 };
 
 export type TabInnerScrollProps<T extends ElementType = "div"> =
@@ -60,12 +62,13 @@ function TabInnerScrollInner<T extends ElementType = "div">(
     direction = "vertical",
     style,
     stopPropagation,
+    strictMode,
     ...rest
   } = props;
   const Component = (as ?? "div") as ElementType;
   const context = useContext(TabsContext);
   const ref = useRef<HTMLElement | null>(null);
-  const restoreKeys = ['touchAction', 'overflowX', 'overflowY', 'webkitOverflowScrolling'] as const
+  const restoreKeys = strictMode ? ['touchAction', 'overflowX', 'overflowY', 'webkitOverflowScrolling'] : ['touchAction'] as const
   const prevStateRef = useRef<Record<(typeof restoreKeys)[number], string | null>>({
     touchAction: null,
     overflowX: null,
@@ -91,34 +94,34 @@ function TabInnerScrollInner<T extends ElementType = "div">(
         if (!element) {
           return;
         }
-
-        const restoreElementStyle = () => {
+        // 重建
+        if (!locked || !axis) {
           restoreKeys.forEach(key => {
             if (prev[key] !== null) {
               element.style[key as any] = prev[key];
               prev[key] = null;
             }
           })
-        };
-
-        if (!locked || !axis) {
-          restoreElementStyle();
           return;
         }
+        // 存储
         if (prev.touchAction === null) {
           prev.touchAction = element.style.touchAction ?? "";
         }
         element.style.touchAction = axis === "horizontal" ? "pan-y" : "pan-x";
-        if (prev.webkitOverflowScrolling === null) {
-          prev.webkitOverflowScrolling =
-            element.style.getPropertyValue("-webkit-overflow-scrolling") ?? "";
+
+        if (strictMode) {
+          if (prev.webkitOverflowScrolling === null) {
+            prev.webkitOverflowScrolling =
+              element.style.getPropertyValue("-webkit-overflow-scrolling") ?? "";
+          }
+          element.style.setProperty("-webkit-overflow-scrolling", "auto");
+          const overflowDir = axis === "horizontal" ? 'overflowX' : 'overflowY'
+          if (prev[overflowDir] === null) {
+            prev[overflowDir] = element.style[overflowDir] ?? "";
+          }
+          element.style[overflowDir] = "hidden";
         }
-        element.style.setProperty("-webkit-overflow-scrolling", "auto");
-        const overflowDir = axis === "horizontal" ? 'overflowX' : 'overflowY'
-        if (prev[overflowDir] === null) {
-          prev[overflowDir] = element.style[overflowDir] ?? "";
-        }
-        element.style[overflowDir] = "hidden";
       },
       shouldAllowParentSwipe(dx, dy) {
         if (stopPropagation) return false;
