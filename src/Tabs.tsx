@@ -55,9 +55,6 @@ function TabsInner<T>(props: TabsProps<T>, ref: React.ForwardedRef<TabsRef>) {
   const layer = (parent?.layer ?? -1) + 1;
   const isControlled = activeIndex !== undefined;
 
-  const [internalIndex, setInternalIndex] = useState(() =>
-    clampIndex(defaultIndex, tabs.length),
-  );
   const [currentIndex, setCurrentIndex] = useState(() =>
     clampIndex(activeIndex ?? defaultIndex, tabs.length),
   );
@@ -98,7 +95,6 @@ function TabsInner<T>(props: TabsProps<T>, ref: React.ForwardedRef<TabsRef>) {
   useEffect(() => {
     if (tabs.length === 0) {
       setCurrentIndex(0);
-      setInternalIndex(0);
       return;
     }
 
@@ -109,11 +105,6 @@ function TabsInner<T>(props: TabsProps<T>, ref: React.ForwardedRef<TabsRef>) {
       return;
     }
 
-    setInternalIndex((prev) => {
-      const next = clampIndex(prev, tabs.length);
-      setCurrentIndex(next);
-      return next;
-    });
     dragOffsetRef.current = 0;
   }, [activeIndex, isControlled, tabs.length]);
 
@@ -159,9 +150,6 @@ function TabsInner<T>(props: TabsProps<T>, ref: React.ForwardedRef<TabsRef>) {
         return false;
       }
 
-      if (!isControlled) {
-        setInternalIndex(normalizedNext);
-      }
       startAnimation(normalizedNext, true, transitionDuration);
       return true;
     },
@@ -356,35 +344,41 @@ function TabsInner<T>(props: TabsProps<T>, ref: React.ForwardedRef<TabsRef>) {
     ],
   );
 
-  const rootStyle: CSSProperties = {
-    flexDirection: getRootFlexDirection(direction),
-  };
-  const isTopOrBottom = direction === "top" || direction === "bottom";
-  const fixedDir: "width" | "height" = isTopOrBottom ? "width" : "height";
-  const flexDir: "width" | "height" = isTopOrBottom ? "height" : "width";
-  const fixedSizeStyle: CSSProperties = { [fixedDir]: "100%" };
-  const flexSizeStyle: CSSProperties =
-    fit === "container" ? { [flexDir]: "100%" } : {};
-  const panelContainerStyle: CSSProperties =
-    fit === "container"
-      ? {
-          flex: 1,
-          minWidth: 0,
-          minHeight: 0,
-          ...fixedSizeStyle,
-          ...flexSizeStyle,
-        }
-      : { ...fixedSizeStyle };
+  const calcStyle = useMemo(() => {
+    const isVertical = direction === "top" || direction === "bottom";
+    const fixedDir = isVertical ? "width" : "height";
+    const flexDir = isVertical ? "height" : "width";
+    const fitContainer =
+      fit === "container"
+        ? { [fixedDir]: "100%", [flexDir]: "100%" }
+        : { [fixedDir]: "100%" };
 
-  const barStyle: CSSProperties = {
-    flexDirection: getBarFlexDirection(direction),
-    ...(("TabBarStyle" in props ? props.TabBarStyle : undefined) ?? {}),
-  };
+    const rootStyle = {
+      flexDirection: getRootFlexDirection(direction),
+      ...fitContainer,
+    };
+    const panelContainerStyle =
+      fit === "container"
+        ? { flex: 1, minWidth: 0, minHeight: 0, ...fitContainer }
+        : { [fixedDir]: "100%" };
 
-  const panelTrackStyle: CSSProperties = {
-    ...fixedSizeStyle,
-    ...flexSizeStyle,
-  };
+    const barStyle = {
+      flexDirection: getBarFlexDirection(direction),
+      ...(("TabBarStyle" in props ? props.TabBarStyle : undefined) ?? {}),
+    };
+
+    const panelItemStyle = {
+      ...fitContainer,
+      flex: fit === "container" ? "0 0 100%" : "0 0 auto",
+    };
+    return {
+      root: rootStyle as CSSProperties,
+      panels: panelContainerStyle as CSSProperties,
+      bar: barStyle as CSSProperties,
+      panel: fitContainer as CSSProperties,
+      panelItem: panelItemStyle as CSSProperties,
+    };
+  }, [fit, direction]);
 
   const swipeProgress =
     tabs.length > 0
@@ -446,10 +440,7 @@ function TabsInner<T>(props: TabsProps<T>, ref: React.ForwardedRef<TabsRef>) {
 
   return (
     <TabsContext.Provider value={contextValue}>
-      <div
-        className={styles.root}
-        style={{ ...rootStyle, ...fixedSizeStyle, ...flexSizeStyle }}
-      >
+      <div className={styles.root} style={calcStyle.root}>
         {TabBarRenderer ? (
           TabBarRenderer({
             items: tabBarItems,
@@ -466,7 +457,7 @@ function TabsInner<T>(props: TabsProps<T>, ref: React.ForwardedRef<TabsRef>) {
               styles.tabBar,
               defaultBarProps.TabBarClassName,
             )}
-            style={barStyle}
+            style={calcStyle.bar}
           >
             {tabBarItems.map((item) => (
               <React.Fragment key={item.key}>
@@ -479,7 +470,7 @@ function TabsInner<T>(props: TabsProps<T>, ref: React.ForwardedRef<TabsRef>) {
         <div
           ref={containerRef}
           className={styles.panelContainer}
-          style={panelContainerStyle}
+          style={calcStyle.panels}
           onMouseDown={onPanelStart}
           onTouchStart={onPanelStart}
           onMouseUp={onPanelEnd}
@@ -489,7 +480,7 @@ function TabsInner<T>(props: TabsProps<T>, ref: React.ForwardedRef<TabsRef>) {
           <div
             ref={panelTrackRef}
             className={styles.panelTrack}
-            style={panelTrackStyle}
+            style={calcStyle.panel}
             onTransitionEnd={onTrackTransitionEnd}
           >
             {tabs.map((tab, index) => {
@@ -500,11 +491,7 @@ function TabsInner<T>(props: TabsProps<T>, ref: React.ForwardedRef<TabsRef>) {
                 <div
                   key={key}
                   className={styles.panelItem}
-                  style={{
-                    ...fixedSizeStyle,
-                    ...flexSizeStyle,
-                    flex: fit === "container" ? "0 0 100%" : "0 0 auto",
-                  }}
+                  style={calcStyle.panelItem}
                 >
                   {visible ? TabPanelRenderer(tab) : null}
                 </div>

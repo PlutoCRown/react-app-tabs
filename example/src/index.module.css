@@ -56,6 +56,132 @@
   color: #0f1722;
 }
 
+.guidePanel {
+  width: 100%;
+  height: 100%;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.guideTitle {
+  margin: 0;
+  font-size: 22px;
+  color: #11243d;
+}
+
+.guideText {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #243e5f;
+}
+
+.testTabsRoot {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.testBar {
+  position: absolute;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  padding: 10px;
+  width: 100%;
+  background: #ffffff33;
+  backdrop-filter: blur(10px);
+  border: 1px solid #d7e3f5;
+  box-shadow: 0 10px 30px #0b244812;
+  z-index: 10;
+}
+
+.testBarButton {
+  border: none;
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: linear-gradient(180deg, #f4f8ff, #ebf2ff);
+  color: #1a3250;
+  font-size: 18px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.feedPanelScroll {
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+}
+
+.feedColumns {
+  min-height: 100%;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  padding: 16px 16px 78px;
+}
+
+.feedColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.feedSkeletonCard {
+  border-radius: 14px;
+  opacity: 0.92;
+  animation: pulseColor 1.8s ease-in-out infinite;
+}
+
+@keyframes pulseColor {
+  0% {
+    filter: brightness(1);
+  }
+  50% {
+    filter: brightness(0.92);
+  }
+  100% {
+    filter: brightness(1);
+  }
+}
+
+.dirPanelScroll {
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+}
+
+.dirPanelInner {
+  padding: 2.5em;
+  display: grid;
+  gap: 20px;
+  padding-bottom: 6.8em;
+}
+
+.dirSection {
+  border-radius: 14px;
+  border: 1px solid #d8e4f7;
+  background: #ffffffcc;
+  padding: 12px;
+}
+
+.dirTitle {
+  margin: 0 0 10px;
+  font-size: 13px;
+  color: #284566;
+  letter-spacing: 0.2px;
+}
+
+.dirTabsDemo {
+  width: 100%;
+  height: 220px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid #e3ebf8;
+}
+
 .cyanPanel {
   width: 100%;
   height: 100%;
@@ -175,7 +301,7 @@
   line-height: 1.45;
 }
 
-.thirdLevelBar {
+.guideTabBar {
   display: flex;
   overflow-x: auto;
   border-bottom: 1px solid #e8edf5;
@@ -184,7 +310,7 @@
   -ms-overflow-style: none;
 }
 
-.thirdLevelBar::-webkit-scrollbar {
+.guideTabBar::-webkit-scrollbar {
   display: none;
 }
 

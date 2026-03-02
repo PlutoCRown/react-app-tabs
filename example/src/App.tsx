@@ -1,12 +1,10 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { TabBarRenderMeta, TabInnerScroll, Tabs } from "../../src";
 import { levelOneTabs, levelTwoTabs, ColorTab } from "./data/tabs";
-import {
-  gradientPanel,
-  thirdLevelTabs,
-  ThirdLevelTab,
-} from "./components/panels";
+import { gradientPanel } from "./components/panels";
+import { guideTabs, GuideTab } from "./components/guide";
 import { defaultTabLabel, levelOneTabLabel } from "./components/tab-labels";
+import { TestTabs } from "./components/test-tabs";
 import { ensureItemVisible } from "./utils/scroll";
 import styles from "./index.module.css";
 
@@ -36,7 +34,7 @@ function getUnderlineStyle(
   };
 }
 
-const ThirdLevelBar = (meta: TabBarRenderMeta<ThirdLevelTab>) => {
+const GuideTabBar = (meta: TabBarRenderMeta<GuideTab>) => {
   const { activeIndex } = meta;
   const barRef = useRef<HTMLDivElement | null>(null);
   const itemRefs = useRef<Array<HTMLButtonElement | null>>([]);
@@ -50,7 +48,7 @@ const ThirdLevelBar = (meta: TabBarRenderMeta<ThirdLevelTab>) => {
       ref={barRef}
       __test_name="Bar_3"
       direction="horizontal"
-      className={styles.thirdLevelBar}
+      className={styles.guideTabBar}
     >
       {meta.items.map((item) => (
         <button
@@ -75,8 +73,8 @@ const ThirdLevelBar = (meta: TabBarRenderMeta<ThirdLevelTab>) => {
   );
 };
 
-function ThirdLevelTabs() {
-  const tabs = useMemo(() => thirdLevelTabs, []);
+function GuideTabs() {
+  const tabs = useMemo(() => guideTabs, []);
   const [active, setActive] = React.useState(0);
 
   return (
@@ -90,7 +88,7 @@ function ThirdLevelTabs() {
         setActive(next);
         return true;
       }}
-      TabBarRenderer={ThirdLevelBar}
+      TabBarRenderer={GuideTabBar}
       TabPanelRenderer={({ Render, color }) => <Render color={color} />}
     />
   );
@@ -178,7 +176,7 @@ function SecondLevelTabs() {
       TabBarRenderer={SecondLevelBar}
       TabPanelRenderer={(tab) => {
         if (tab.id === "cyan") {
-          return <ThirdLevelTabs />;
+          return <GuideTabs />;
         }
         return gradientPanel(tab.color, tab.name);
       }}
@@ -206,6 +204,9 @@ export function App() {
         TabPanelRenderer={(tab) => {
           if (tab.id === "blue") {
             return <SecondLevelTabs />;
+          }
+          if (tab.id === "red") {
+            return <TestTabs />;
           }
           return gradientPanel(tab.color, tab.name);
         }}
