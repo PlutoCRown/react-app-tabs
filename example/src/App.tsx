@@ -97,7 +97,7 @@ function ThirdLevelTabs() {
 }
 
 const SecondLevelBar = (meta: TabBarRenderMeta<ColorTab>) => {
-  const { activeIndex } = meta;
+  const { activeIndex, callback, duration } = meta;
 
   const barRef = useRef<HTMLDivElement | null>(null);
   const underlineRef = useRef<HTMLDivElement | null>(null);
@@ -105,6 +105,18 @@ const SecondLevelBar = (meta: TabBarRenderMeta<ColorTab>) => {
   useEffect(() => {
     ensureItemVisible(barRef.current, itemRefs.current[activeIndex] ?? null);
   }, [activeIndex]);
+
+  useEffect(() => {
+    callback.onSwipe((progress) => {
+      console.log(progress);
+      applyUnderline(progress, false);
+    });
+    callback.onChange((active) => {
+      console.log("过度到", active);
+      applyUnderline(active, true);
+    });
+    return callback.clear;
+  }, []);
 
   const applyUnderline = React.useCallback(
     (progress: number, animate: boolean) => {
@@ -117,7 +129,7 @@ const SecondLevelBar = (meta: TabBarRenderMeta<ColorTab>) => {
         return;
       }
       underline.style.transition = animate
-        ? "transform 300ms ease, width 300ms ease"
+        ? `transform ${duration}ms ease, width ${duration}ms ease`
         : "none";
       underline.style.transform = underlineStyle.transform;
       underline.style.width = `${underlineStyle.width}px`;
@@ -126,11 +138,8 @@ const SecondLevelBar = (meta: TabBarRenderMeta<ColorTab>) => {
   );
 
   useLayoutEffect(() => {
-    const raf = requestAnimationFrame(() => {
-      applyUnderline(activeIndex, false);
-    });
-    return () => cancelAnimationFrame(raf);
-  }, [activeIndex, applyUnderline]);
+    applyUnderline(activeIndex, false);
+  }, []);
 
   return (
     <div className={styles.secondLevelCustomBar}>

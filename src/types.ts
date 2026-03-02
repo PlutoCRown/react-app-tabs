@@ -28,8 +28,12 @@ export type TabBarRenderMeta<T> = {
   swipeProgress: number;
   direction: TabDirection;
   fit: TabFit;
-  onSwipe?: (progress: number) => void;
-  onChange?: (activeIndex: number) => void;
+  duration: number,
+  callback: {
+    onSwipe: (callback: (progress: number) => void) => void;
+    onChange: (callback: (activeIndex: number) => void) => void;
+    clear: () => void;
+  };
 };
 
 export type TabsBaseProps<T> = {

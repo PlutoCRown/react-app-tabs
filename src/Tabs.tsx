@@ -68,6 +68,10 @@ function TabsInner<T>(props: TabsProps<T>, ref: React.ForwardedRef<TabsRef>) {
   const pendingAfterChangeIndex = useRef<number | null>(null);
   const movedOnceRef = useRef(false);
   const repickSentRef = useRef(false);
+  const tabBarCallbackRef = useRef<{
+    onSwipe?: (progress: number) => void;
+    onChange?: (activeIndex: number) => void;
+  }>({});
 
   useEffect(() => {
     gestureManager.ensureListeners();
@@ -125,7 +129,8 @@ function TabsInner<T>(props: TabsProps<T>, ref: React.ForwardedRef<TabsRef>) {
         startAnimation(prev, false);
         return false;
       }
-
+      // 触发 Bar 的 onChange 和 Panel 的 onChange
+      tabBarCallbackRef.current.onChange?.(normalizedNext);
       const allowed = onChange?.(normalizedNext, prev);
       if (allowed === false) {
         startAnimation(prev, false);
@@ -166,6 +171,7 @@ function TabsInner<T>(props: TabsProps<T>, ref: React.ForwardedRef<TabsRef>) {
       const rawProgress =
         containerWidth > 0 ? currentIndex - dx / containerWidth : currentIndex;
       const nextProgress = Math.min(tabs.length - 1, Math.max(0, rawProgress));
+      tabBarCallbackRef.current.onSwipe?.(nextProgress);
       onSwipe?.(nextProgress);
       if (dx > 16) {
         setPreviewBarIndex(currentIndex - 1);
@@ -244,8 +250,8 @@ function TabsInner<T>(props: TabsProps<T>, ref: React.ForwardedRef<TabsRef>) {
           movedOnceRef.current = false;
           repickSentRef.current = false;
           const containerWidth = containerRef.current?.clientWidth ?? 0;
-          const threshold = Math.max(28, containerWidth * 0.2);
-          const mixedDx = dx + dvx * 280;
+          const threshold = Math.max(28, containerWidth * 0.4);
+          const mixedDx = dx + (dvx * containerWidth) / 2;
           if (mixedDx > threshold) {
             if (!commitIndex(currentIndex - 1)) {
               startAnimation(currentIndex, shouldNotifySettle);
@@ -258,6 +264,9 @@ function TabsInner<T>(props: TabsProps<T>, ref: React.ForwardedRef<TabsRef>) {
             }
             return;
           }
+
+          // Bar 的动画 onChange 即使和和之前的相同也要触发
+          tabBarCallbackRef.current.onChange?.(currentIndex);
           startAnimation(currentIndex, shouldNotifySettle);
         },
       });
@@ -293,6 +302,7 @@ function TabsInner<T>(props: TabsProps<T>, ref: React.ForwardedRef<TabsRef>) {
       const pending = pendingAfterChangeIndex.current;
       pendingAfterChangeIndex.current = null;
       if (pending !== null) {
+        tabBarCallbackRef.current.onChange?.(pending);
         onAfterChange?.(pending);
       }
     },
@@ -387,6 +397,22 @@ function TabsInner<T>(props: TabsProps<T>, ref: React.ForwardedRef<TabsRef>) {
     [commitIndex, currentIndex],
   );
 
+  const tabBarCallbackApi = useMemo(
+    () => ({
+      onSwipe: (callback: (progress: number) => void) => {
+        tabBarCallbackRef.current.onSwipe = callback;
+      },
+      onChange: (callback: (activeIndex: number) => void) => {
+        tabBarCallbackRef.current.onChange = callback;
+      },
+      clear: () => {
+        tabBarCallbackRef.current.onSwipe = undefined;
+        tabBarCallbackRef.current.onChange = undefined;
+      },
+    }),
+    [],
+  );
+
   return (
     <TabsContext.Provider value={contextValue}>
       <div
@@ -400,8 +426,8 @@ function TabsInner<T>(props: TabsProps<T>, ref: React.ForwardedRef<TabsRef>) {
             swipeProgress,
             direction,
             fit,
-            onSwipe,
-            onChange: onAfterChange,
+            duration,
+            callback: tabBarCallbackApi,
           })
         ) : (
           <div
