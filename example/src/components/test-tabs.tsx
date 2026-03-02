@@ -1,23 +1,26 @@
 import React, { useState } from "react";
 import {
+  TabBarItemRenderMeta,
   TabBarRenderMeta,
   TabDirection,
   TabInnerScroll,
+  TabItem,
   Tabs,
 } from "../../../src";
 import { ColorTab } from "../data/tabs";
 import { gradientPanel } from "./panels";
 import styles from "../index.module.css";
 
-type TestTab = {
-  id: "feed" | "dir";
-  name: string;
-};
-
-const testTabs: TestTab[] = [
+const testTabs = [
   { id: "feed", name: "Feed" },
   { id: "dir", name: "Dir" },
-];
+  { id: "nested", name: "Nested" },
+] as const;
+
+type TestTab = {
+  id: (typeof testTabs)[number]['id']
+  name: string;
+};
 
 const dirDemoTabs: ColorTab[] = [
   { id: "sun", name: "Sun", color: "#ff8f6b" },
@@ -25,31 +28,21 @@ const dirDemoTabs: ColorTab[] = [
   { id: "leaf", name: "Leaf", color: "#61cf93" },
 ];
 
-// const dirDirections: TabDirection[] = ["right"];
 const dirDirections: TabDirection[] = ["top", "right", "left"];
+const feedLeftHeights = [128, 179, 147, 208, 140, 192, 153, 195]
+const feedRightHeights = [176, 137, 217, 150, 198, 131, 188, 166]
 
-const feedLeftHeights = [80, 112, 92, 130, 88, 120, 96, 122].map(
-  (i) => i * 1.6,
-);
-const feedRightHeights = [110, 86, 136, 94, 124, 82, 118, 104].map(
-  (i) => i * 1.6,
-);
-
-function TestTabBar({ items }: TabBarRenderMeta<TestTab>) {
+function TestTabBarItem(tab: TestTab, meta: TabBarItemRenderMeta) {
   return (
-    <div className={styles.testBar}>
-      {items.map((item) => (
-        <button
-          key={item.key}
-          type="button"
-          onClick={item.onClick}
-          className={styles.testBarButton}
-          style={{ opacity: item.active ? 1 : 0.55 }}
-        >
-          {item.tab.name}
-        </button>
-      ))}
-    </div>
+    <button
+      key={tab.id}
+      type="button"
+      onClick={meta.onClick}
+      className={styles.testBarButton}
+      style={{ opacity: meta.active ? 1 : 0.55 }}
+    >
+      {tab.name}
+    </button>
   );
 }
 
@@ -62,20 +55,12 @@ function FeedPanel() {
       <div className={styles.feedColumns}>
         <div className={styles.feedColumn}>
           {feedLeftHeights.map((height, index) => (
-            <div
-              key={`left-${index}`}
-              className={styles.feedSkeletonCard}
-              style={{ height, background: `hsl(${190 + index * 16} 86% 84%)` }}
-            />
+            <div key={index} style={{ height, background: `hsl(${190 + index * 16} 86% 84%)` }} />
           ))}
         </div>
         <div className={styles.feedColumn}>
           {feedRightHeights.map((height, index) => (
-            <div
-              key={`right-${index}`}
-              className={styles.feedSkeletonCard}
-              style={{ height, background: `hsl(${340 - index * 14} 90% 86%)` }}
-            />
+            <div key={index} style={{ height, background: `hsl(${340 - index * 14} 90% 86%)` }} />
           ))}
         </div>
       </div>
@@ -126,9 +111,38 @@ function DirPanel() {
   );
 }
 
+function ScrollerInPanel() {
+  return <div className={styles.dirPanelInner} style={{ height: '100%' }}>
+
+    <h2 style={{ padding: "1em", marginBottom: 0 }}>
+      中间的面板包含长元素
+    </h2>
+    <section className={styles.dirSection} style={{ flexGrow: 1, minHeight: 0 }}>
+      <Tabs
+        tabs={dirDemoTabs}
+        __test_name="nested"
+        keyExtractor={(tab) => tab.id}
+        direction='left'
+        defaultIndex={0}
+        switchDuration={300}
+        TabBarItemRenderer={(tab, meta) => (
+          <button
+            type="button"
+            onClick={meta.onClick}
+            className={styles.defaultTabButton}
+            style={{ opacity: meta.active ? 1 : 0.55 }}
+          >
+            {tab.name}
+          </button>
+        )}
+        TabPanelRenderer={(tab) => tab.id == "ocean" ?
+          <FeedPanel />
+          : gradientPanel(tab.color, `${tab.name}`)}
+      />
+    </section>
+  </div>
+}
 export function TestTabs() {
-  // 测试受控
-  const [active, setActive] = useState(1);
   return (
     <div className={styles.testTabsRoot}>
       <Tabs
@@ -136,12 +150,15 @@ export function TestTabs() {
         tabs={testTabs}
         keyExtractor={(tab) => tab.id}
         direction="bottom"
-        activeIndex={active}
-        onChange={(index) => (setActive(index), true)}
-        TabBarRenderer={TestTabBar}
+        defaultIndex={0}
+        TabBarClassName={styles.testBar}
+        TabBarItemRenderer={TestTabBarItem}
         TabPanelRenderer={(tab) => {
           if (tab.id === "feed") {
             return <FeedPanel />;
+          }
+          if (tab.id == "nested") {
+            return <ScrollerInPanel />
           }
           return <DirPanel />;
         }}

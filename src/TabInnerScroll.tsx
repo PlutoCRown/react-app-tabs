@@ -65,12 +65,8 @@ function TabInnerScrollInner<T extends ElementType = "div">(
   const Component = (as ?? "div") as ElementType;
   const context = useContext(TabsContext);
   const ref = useRef<HTMLElement | null>(null);
-  const prevStateRef = useRef<{
-    touchAction: string | null;
-    overflowX: string | null;
-    overflowY: string | null;
-    webkitOverflowScrolling: string | null;
-  }>({
+  const restoreKeys = ['touchAction', 'overflowX', 'overflowY', 'webkitOverflowScrolling'] as const
+  const prevStateRef = useRef<Record<(typeof restoreKeys)[number], string | null>>({
     touchAction: null,
     overflowX: null,
     overflowY: null,
@@ -97,7 +93,6 @@ function TabInnerScrollInner<T extends ElementType = "div">(
         }
 
         const restoreElementStyle = () => {
-          const restoreKeys = ['touchAction', 'overflowX', 'overflowY', 'webkitOverflowScrolling'] as const
           restoreKeys.forEach(key => {
             if (prev[key] !== null) {
               element.style[key as any] = prev[key];
