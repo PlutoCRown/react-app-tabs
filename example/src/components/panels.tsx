@@ -32,7 +32,7 @@ function CodeSnippet({ text }: { text: string }) {
   );
 }
 
-function storyCard(title: string, body: string) {
+function storyCard(title: string, body: React.ReactNode) {
   return (
     <div className={styles.cyanStoryCard}>
       <h4 className={styles.cyanStoryTitle}>{title}</h4>
@@ -51,26 +51,29 @@ function CyanPanelIntro({ color }: { color: string }) {
           这个库处理手势分配。多层页面、横向切换、内部滚动容器并存时，手势会按层级和边界状态流转。
         </p>
       </div>
-
-      <div className={styles.cyanDocIntro}>
-        <p className={styles.cyanParagraph}>
-          这是一份可滑动文档。直接向左或向右滑动，就能感受交互链路。
-        </p>
-        <p className={styles.cyanParagraph}>
-          每一页都对应一个使用场景，读完后可以直接落到项目里。
+      <div className={styles.cyanQuote}>
+        <span className={styles.cyanQuoteMark}>👋</span>
+        <p className={styles.cyanQuoteText}>
+          试试向左向右滑动可以切换不同层级的Tab!
         </p>
       </div>
-
       <section className={styles.cyanSection}>
-        <h3 className={styles.cyanSectionTitle}>这个库处理的问题</h3>
+        <h3 className={styles.cyanSectionTitle}>这个库解决的问题</h3>
         <div className={styles.cyanStoryGrid}>
-          {storyCard("误触切页", "用户想滚动内容，却触发了外层切页。")}
-          {storyCard("边界断层", "内层滚动到边缘后，交接不顺，拖拽会发涩。")}
-          {storyCard("层级混乱", "同一个动作在不同层表现不一致，预期被打断。")}
+          {storyCard(
+            "嵌套滑动切换",
+            "支持多层标签页的横向滑动手势，子层级滑到底才交给父层级，切换体验更自然。",
+          )}
+          {storyCard(
+            "滚动冲突",
+            "自动判断滚动边界，防止内部滚动和外部标签切换手势的冲突，确保操作顺畅。",
+          )}
+          {storyCard(
+            "移动端优先",
+            "针对移动端交互优化，手势流转逻辑简洁，兼容多种触控场景。",
+          )}
         </div>
       </section>
-
-      <p className={styles.cyanFooter}>继续滑动进入 Tabs 接入页。</p>
     </div>
   );
 }
@@ -115,13 +118,6 @@ function CyanPanelBasicTabBar({ color }: { color: string }) {
           <div className={styles.cyanCodeLang}>tsx</div>
         </figure>
       </section>
-
-      <div className={styles.cyanQuote}>
-        <span className={styles.cyanQuoteMark}>“</span>
-        <p className={styles.cyanQuoteText}>
-          先把交互跑通，再按业务风格补视觉。
-        </p>
-      </div>
     </div>
   );
 }
@@ -171,7 +167,11 @@ function CyanPanelCustomTabBar({ color }: { color: string }) {
           可以直接驱动 DOM
           动画，不需要额外刷新状态。指示线、进度片段都能跟手势移动。
         </p>
-        <p className={styles.cyanTip}>这套方式适合高频交互的顶部导航。</p>
+        <p className={styles.cyanTip}>
+          可以点击上面的Purple栏，再滑动回当前页面
+          <br />
+          观察 <b>无React刷新</b>的动画线
+        </p>
       </section>
 
       <section className={styles.cyanSection}>
@@ -234,6 +234,17 @@ function CyanPanelInnerScroll({ color }: { color: string }) {
       </section>
 
       <section className={styles.cyanSection}>
+        <h3 className={styles.cyanSectionTitle}>参数说明</h3>
+        <div className={styles.cyanStoryGrid}>
+          {storyCard("as", "默认是 div ,可以改变 DOM 元素")}
+          {storyCard(
+            "stopPropagation",
+            "默认为false, true: 永远不允许在此组件内滑动到外部面板",
+          )}
+          {storyCard("其他参数", "与 div 相同 ")}
+        </div>
+      </section>
+      <section className={styles.cyanSection}>
         <h3 className={styles.cyanSectionTitle}>冲突处理流程</h3>
         <div className={styles.cyanStoryGrid}>
           {storyCard("还能滚", "先交给内部容器。")}
@@ -250,11 +261,7 @@ function CyanPanelOtherProps({ color }: { color: string }) {
     <div className={styles.cyanPanel} style={docPanelStyle(color)}>
       <div className={styles.cyanHeroMini}>
         <div className={styles.cyanKicker}>STEP 04</div>
-        <h2 className={styles.cyanDocTitle}>属性与调参</h2>
-        <p className={styles.cyanLeadMini}>
-          <InlineCode>fit</InlineCode>、<InlineCode>duration</InlineCode>、
-          <InlineCode>direction</InlineCode> 会直接影响切换手感。
-        </p>
+        <h2 className={styles.cyanDocTitle}>其他参数</h2>
       </div>
 
       <section className={styles.cyanSection}>
@@ -268,7 +275,13 @@ function CyanPanelOtherProps({ color }: { color: string }) {
           </div>
           <div className={styles.cyanPropItem}>
             <div className={styles.cyanPropKey}>duration</div>
-            <p className={styles.cyanParagraph}>控制松手后的吸附速度。</p>
+            <p className={styles.cyanParagraph}>控制滑动切换过渡时间</p>
+          </div>
+          <div className={styles.cyanPropItem}>
+            <div className={styles.cyanPropKey}>swtichDuration</div>
+            <p className={styles.cyanParagraph}>
+              控制点击TabBar后的切换过渡时间
+            </p>
           </div>
           <div className={styles.cyanPropItem}>
             <div className={styles.cyanPropKey}>direction</div>
@@ -363,7 +376,7 @@ export const thirdLevelTabs: ThirdLevelTab[] = [
   {
     id: "cyan-5",
     name: "Cyan-5",
-    title: "其他选项",
+    title: "其他参数",
     color: "#48c88f",
     Render: CyanPanelOtherProps,
   },
