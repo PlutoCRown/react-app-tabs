@@ -49,11 +49,13 @@ function TabsInner<T>(props: TabsProps<T>, ref: React.ForwardedRef<TabsRef>) {
     duration = 300,
     switchDuration = 0,
     TabBarRenderer,
+    TabBarStyle = {}
   } = props;
 
   const parent = useContext(TabsContext);
   const layer = (parent?.layer ?? -1) + 1;
   const isControlled = activeIndex !== undefined;
+  const isHorizontalSwipe = direction === "top" || direction === "bottom";
 
   const [currentIndex, setCurrentIndex] = useState(() =>
     clampIndex(activeIndex ?? defaultIndex, tabs.length),
@@ -83,9 +85,11 @@ function TabsInner<T>(props: TabsProps<T>, ref: React.ForwardedRef<TabsRef>) {
         transitionDurationMs > 0
           ? `transform ${transitionDurationMs}ms ease`
           : "none";
-      track.style.transform = `translate3d(calc(${-currentIndex * 100}% + ${offsetPx}px), 0, 0)`;
+      track.style.transform = isHorizontalSwipe
+        ? `translate3d(calc(${-currentIndex * 100}% + ${offsetPx}px), 0, 0)`
+        : `translate3d(0, calc(${-currentIndex * 100}% + ${offsetPx}px), 0)`;
     },
-    [currentIndex],
+    [currentIndex, isHorizontalSwipe],
   );
 
   useEffect(() => {
@@ -182,19 +186,30 @@ function TabsInner<T>(props: TabsProps<T>, ref: React.ForwardedRef<TabsRef>) {
   }, [applyTrackTransform, parent]);
 
   const previewSwipe = useCallback(
-    (dx: number) => {
+    (mainDelta: number) => {
       setIsAnimating(false);
-      dragOffsetRef.current = dx;
-      applyTrackTransform(dx, 0);
-      const containerWidth = containerRef.current?.clientWidth ?? 0;
+      dragOffsetRef.current = mainDelta;
+      applyTrackTransform(mainDelta, 0);
+      const containerSize = isHorizontalSwipe
+        ? containerRef.current?.clientWidth ?? 0
+        : containerRef.current?.clientHeight ?? 0;
       const rawProgress =
-        containerWidth > 0 ? currentIndex - dx / containerWidth : currentIndex;
+        containerSize > 0
+          ? currentIndex - mainDelta / containerSize
+          : currentIndex;
       const nextProgress = Math.min(tabs.length - 1, Math.max(0, rawProgress));
       tabBarCallbackRef.current.onSwipe?.(nextProgress);
       onSwipe?.(nextProgress);
       return "self";
     },
-    [applyTrackTransform, currentIndex, onSwipe, parent, tabs.length],
+    [
+      applyTrackTransform,
+      currentIndex,
+      isHorizontalSwipe,
+      onSwipe,
+      parent,
+      tabs.length,
+    ],
   );
 
   const onPanelStart = useCallback(
@@ -211,16 +226,23 @@ function TabsInner<T>(props: TabsProps<T>, ref: React.ForwardedRef<TabsRef>) {
         name: __test_name ?? `Tab(layer:${layer})`,
         layer,
         canHandle: (dx, dy) => {
-          if (Math.abs(dx) < Math.abs(dy)) {
-            return { accept: false, reason: "纵向位移更大" };
+          const mainDelta = isHorizontalSwipe ? dx : dy;
+          const crossDelta = isHorizontalSwipe ? dy : dx;
+          if (Math.abs(mainDelta) < Math.abs(crossDelta)) {
+            return {
+              accept: false,
+              reason: isHorizontalSwipe
+                ? "纵向位移更大"
+                : "横向位移更大",
+            };
           }
-          if (dx > 0) {
+          if (mainDelta > 0) {
             if (currentIndex > 0) {
               return { accept: true, reason: "可向前切换" };
             }
             return { accept: false, reason: "已在首项" };
           }
-          if (dx < 0) {
+          if (mainDelta < 0) {
             if (currentIndex < tabs.length - 1) {
               return { accept: true, reason: "可向后切换" };
             }
@@ -236,41 +258,46 @@ function TabsInner<T>(props: TabsProps<T>, ref: React.ForwardedRef<TabsRef>) {
           movedOnceRef.current = false;
           repickSentRef.current = false;
         },
-        onMove: (dx, _dy, requestRepick) => {
-          if (Math.abs(dx) > 12) {
+        onMove: (dx, dy, requestRepick) => {
+          const mainDelta = isHorizontalSwipe ? dx : dy;
+          if (Math.abs(mainDelta) > 12) {
             movedOnceRef.current = true;
           }
           if (
             !repickSentRef.current &&
             movedOnceRef.current &&
-            Math.abs(dx) <= 4
+            Math.abs(mainDelta) <= 4
           ) {
             repickSentRef.current = true;
             requestRepick();
           }
-          const previewMode = previewSwipe(dx);
+          const previewMode = previewSwipe(mainDelta);
           if (previewMode === "self") {
             return;
           }
           setIsAnimating(false);
-          dragOffsetRef.current = dx * 0.35;
-          applyTrackTransform(dx * 0.35, 0);
+          dragOffsetRef.current = mainDelta * 0.35;
+          applyTrackTransform(mainDelta * 0.35, 0);
         },
-        onEnd: (dx, _dy, dvx) => {
+        onEnd: (dx, dy, dvx, dvy) => {
           activeGestureId.current = null;
           const shouldNotifySettle = movedOnceRef.current;
           movedOnceRef.current = false;
           repickSentRef.current = false;
-          const containerWidth = containerRef.current?.clientWidth ?? 0;
-          const threshold = Math.max(28, containerWidth * 0.4);
-          const mixedDx = dx + (dvx * containerWidth) / 2;
-          if (mixedDx > threshold) {
+          const mainDelta = isHorizontalSwipe ? dx : dy;
+          const mainVelocity = isHorizontalSwipe ? dvx : dvy;
+          const containerSize = isHorizontalSwipe
+            ? containerRef.current?.clientWidth ?? 0
+            : containerRef.current?.clientHeight ?? 0;
+          const threshold = Math.max(28, containerSize * 0.4);
+          const mixedDelta = mainDelta + (mainVelocity * containerSize) / 2;
+          if (mixedDelta > threshold) {
             if (!commitIndex(currentIndex - 1, "swipe")) {
               startAnimation(currentIndex, shouldNotifySettle, duration);
             }
             return;
           }
-          if (mixedDx < -threshold) {
+          if (mixedDelta < -threshold) {
             if (!commitIndex(currentIndex + 1, "swipe")) {
               startAnimation(currentIndex, shouldNotifySettle, duration);
             }
@@ -294,6 +321,7 @@ function TabsInner<T>(props: TabsProps<T>, ref: React.ForwardedRef<TabsRef>) {
       tabs.length,
       duration,
       applyTrackTransform,
+      isHorizontalSwipe,
     ],
   );
 
@@ -353,44 +381,23 @@ function TabsInner<T>(props: TabsProps<T>, ref: React.ForwardedRef<TabsRef>) {
         ? { [fixedDir]: "100%", [flexDir]: "100%" }
         : { [fixedDir]: "100%" };
 
-    const rootStyle = {
-      flexDirection: getRootFlexDirection(direction),
-      ...fitContainer,
-    };
     const panelContainerStyle =
       fit === "container"
         ? { flex: 1, minWidth: 0, minHeight: 0, ...fitContainer }
         : { [fixedDir]: "100%" };
 
-    const barStyle = {
-      flexDirection: getBarFlexDirection(direction),
-      ...(("TabBarStyle" in props ? props.TabBarStyle : undefined) ?? {}),
-    };
-
-    const panelItemStyle = {
-      ...fitContainer,
-      flex: fit === "container" ? "0 0 100%" : "0 0 auto",
-    };
+    const barStyle = { flexDirection: getBarFlexDirection(direction), ...TabBarStyle };
+    const rootStyle = { flexDirection: getRootFlexDirection(direction), ...fitContainer, };
+    const panelItemStyle = { ...fitContainer, flex: fit === "container" ? "0 0 100%" : "0 0 auto", };
+    const panelTrackStyle = { ...fitContainer, flexDirection: isHorizontalSwipe ? "row" : "column", };
     return {
       root: rootStyle as CSSProperties,
       panels: panelContainerStyle as CSSProperties,
       bar: barStyle as CSSProperties,
-      panel: fitContainer as CSSProperties,
+      panel: panelTrackStyle as CSSProperties,
       panelItem: panelItemStyle as CSSProperties,
     };
-  }, [fit, direction]);
-
-  const swipeProgress =
-    tabs.length > 0
-      ? (() => {
-          const containerWidth = containerRef.current?.clientWidth ?? 0;
-          const rawProgress =
-            containerWidth > 0
-              ? currentIndex - dragOffsetRef.current / containerWidth
-              : currentIndex;
-          return Math.min(tabs.length - 1, Math.max(0, rawProgress));
-        })()
-      : 0;
+  }, [fit, direction, isHorizontalSwipe]);
 
   useLayoutEffect(() => {
     applyTrackTransform(
@@ -445,7 +452,6 @@ function TabsInner<T>(props: TabsProps<T>, ref: React.ForwardedRef<TabsRef>) {
           TabBarRenderer({
             items: tabBarItems,
             activeIndex: currentIndex,
-            swipeProgress,
             direction,
             fit,
             duration,

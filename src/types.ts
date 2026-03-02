@@ -25,7 +25,6 @@ export type TabBarRenderItem<T> = {
 export type TabBarRenderMeta<T> = {
   items: TabBarRenderItem<T>[];
   activeIndex: number;
-  swipeProgress: number;
   direction: TabDirection;
   fit: TabFit;
   duration: number,

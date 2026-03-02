@@ -95,7 +95,7 @@ function pickOwner(dx: number, dy: number) {
 
   let owner: GestureCandidate | null = null;
   for (const candidate of candidates) {
-    const decision = candidate.canHandle(dx, dy);
+  const decision = candidate.canHandle(dx, dy);
     if (!decision.accept) {
       flow.push(`触碰事件交给${candidate.name}，拒绝接管（${decision.reason}）`);
       continue;
@@ -152,6 +152,7 @@ function dispatchMove(point: { x: number; y: number }) {
     session.repickRequested = false;
     const { owner: nextOwner, flow } = pickOwner(dx, dy);
     assignOwner(nextOwner, dx, dy);
+    console.log(flow)
     // if (flow.length > 0) {
     //   console.log('[react-app-tabs][manager] 手势决策', {
     //     flow,
