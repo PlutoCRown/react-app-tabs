@@ -14,7 +14,9 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "check": "tsc --noEmit -p tsconfig.json",
-    "example": "bun --cwd example run dev"
+    "example": "bun --cwd example run dev",
+    "prepublishOnly": "npm run check && npm run build",
+    "pack:dry": "npm_config_cache=/tmp/.npm-cache npm pack --dry-run"
   },
   "peerDependencies": {
     "react": ">=18",
