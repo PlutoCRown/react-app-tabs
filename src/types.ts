@@ -51,6 +51,7 @@ export type TabsBaseProps<T> = {
   direction?: TabDirection;
   lazyLoadDistance?: number;
   duration?: number;
+  switchDuration?: number;
 };
 
 export type TabsWithDefaultBarProps<T> = {

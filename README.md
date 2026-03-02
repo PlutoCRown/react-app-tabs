@@ -98,6 +98,7 @@ type Props<T> = {
   direction?: 'bottom' | 'left' | 'right' | 'top';
   lazyLoadDistance?: number;
   duration?: number;
+  switchDuration?: number;
 } & (
   | {
       TabBarItemRenderer: (

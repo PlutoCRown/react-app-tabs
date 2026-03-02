@@ -46,6 +46,7 @@ function TabsInner<T>(props: TabsProps<T>, ref: React.ForwardedRef<TabsRef>) {
     direction = "bottom",
     lazyLoadDistance = 3,
     duration = 300,
+    switchDuration = 0,
     TabBarRenderer,
   } = props;
 
@@ -68,6 +69,7 @@ function TabsInner<T>(props: TabsProps<T>, ref: React.ForwardedRef<TabsRef>) {
   const pendingAfterChangeIndex = useRef<number | null>(null);
   const movedOnceRef = useRef(false);
   const repickSentRef = useRef(false);
+  const animationDurationRef = useRef(duration);
   const tabBarCallbackRef = useRef<{
     onSwipe?: (progress: number) => void;
     onChange?: (activeIndex: number) => void;
@@ -102,55 +104,69 @@ function TabsInner<T>(props: TabsProps<T>, ref: React.ForwardedRef<TabsRef>) {
   }, [activeIndex, isControlled, tabs.length]);
 
   const startAnimation = useCallback(
-    (targetIndex: number, shouldTriggerAfterChange: boolean) => {
+    (
+      targetIndex: number,
+      shouldTriggerAfterChange: boolean,
+      transitionDuration: number,
+    ) => {
       setDragOffset(0);
       setPreviewBarIndex(null);
       setCurrentIndex(targetIndex);
-      if (duration <= 0) {
+      if (transitionDuration <= 0) {
         setIsAnimating(false);
         if (shouldTriggerAfterChange) {
           onAfterChange?.(targetIndex);
         }
         return;
       }
+      animationDurationRef.current = transitionDuration;
       pendingAfterChangeIndex.current = shouldTriggerAfterChange
         ? targetIndex
         : null;
       setIsAnimating(true);
     },
-    [duration, onAfterChange],
+    [onAfterChange],
   );
 
   const commitIndex = useCallback(
-    (nextIndex: number) => {
+    (nextIndex: number, trigger: "swipe" | "switch" = "swipe") => {
+      const transitionDuration = trigger === "switch" ? switchDuration : duration;
       const normalizedNext = clampIndex(nextIndex, tabs.length);
       const prev = currentIndex;
       if (normalizedNext === prev) {
-        startAnimation(prev, false);
+        startAnimation(prev, false, transitionDuration);
         return false;
       }
       // 触发 Bar 的 onChange 和 Panel 的 onChange
       tabBarCallbackRef.current.onChange?.(normalizedNext);
       const allowed = onChange?.(normalizedNext, prev);
       if (allowed === false) {
-        startAnimation(prev, false);
+        startAnimation(prev, false, transitionDuration);
         return false;
       }
 
       if (!isControlled) {
         setInternalIndex(normalizedNext);
       }
-      startAnimation(normalizedNext, true);
+      startAnimation(normalizedNext, true, transitionDuration);
       return true;
     },
-    [currentIndex, isControlled, onChange, startAnimation, tabs.length],
+    [
+      currentIndex,
+      duration,
+      isControlled,
+      onChange,
+      startAnimation,
+      switchDuration,
+      tabs.length,
+    ],
   );
 
   const requestSwipe = useCallback(
     (step: -1 | 1) => {
       const target = currentIndex + step;
       if (target >= 0 && target < tabs.length) {
-        return commitIndex(target);
+        return commitIndex(target, "swipe");
       }
       return parent?.requestSwipe?.(step) ?? false;
     },
@@ -253,21 +269,21 @@ function TabsInner<T>(props: TabsProps<T>, ref: React.ForwardedRef<TabsRef>) {
           const threshold = Math.max(28, containerWidth * 0.4);
           const mixedDx = dx + (dvx * containerWidth) / 2;
           if (mixedDx > threshold) {
-            if (!commitIndex(currentIndex - 1)) {
-              startAnimation(currentIndex, shouldNotifySettle);
+            if (!commitIndex(currentIndex - 1, "swipe")) {
+              startAnimation(currentIndex, shouldNotifySettle, duration);
             }
             return;
           }
           if (mixedDx < -threshold) {
-            if (!commitIndex(currentIndex + 1)) {
-              startAnimation(currentIndex, shouldNotifySettle);
+            if (!commitIndex(currentIndex + 1, "swipe")) {
+              startAnimation(currentIndex, shouldNotifySettle, duration);
             }
             return;
           }
 
           // Bar 的动画 onChange 即使和和之前的相同也要触发
           tabBarCallbackRef.current.onChange?.(currentIndex);
-          startAnimation(currentIndex, shouldNotifySettle);
+          startAnimation(currentIndex, shouldNotifySettle, duration);
         },
       });
     },
@@ -280,6 +296,7 @@ function TabsInner<T>(props: TabsProps<T>, ref: React.ForwardedRef<TabsRef>) {
       startAnimation,
       swipable,
       tabs.length,
+      duration,
     ],
   );
 
@@ -359,7 +376,9 @@ function TabsInner<T>(props: TabsProps<T>, ref: React.ForwardedRef<TabsRef>) {
     ...fixedSizeStyle,
     ...flexSizeStyle,
     transform: `translate3d(calc(${-currentIndex * 100}% + ${dragOffset}px), 0, 0)`,
-    transition: isAnimating ? `transform ${duration}ms ease` : undefined,
+    transition: isAnimating
+      ? `transform ${animationDurationRef.current}ms ease`
+      : undefined,
   };
 
   const swipeProgress =
@@ -382,7 +401,7 @@ function TabsInner<T>(props: TabsProps<T>, ref: React.ForwardedRef<TabsRef>) {
     index,
     active: index === currentIndex,
     onClick: () => {
-      commitIndex(index);
+      commitIndex(index, "switch");
     },
   }));
 
@@ -391,7 +410,7 @@ function TabsInner<T>(props: TabsProps<T>, ref: React.ForwardedRef<TabsRef>) {
     () => ({
       getActiveIndex: () => currentIndex,
       setActiveIndex: (nextIndex: number) => {
-        commitIndex(nextIndex);
+        commitIndex(nextIndex, "switch");
       },
     }),
     [commitIndex, currentIndex],

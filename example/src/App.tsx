@@ -174,6 +174,7 @@ function SecondLevelTabs() {
       tabs={levelTwoTabs}
       keyExtractor={(tab) => tab.id}
       direction="top"
+      defaultIndex={1}
       TabBarRenderer={SecondLevelBar}
       TabPanelRenderer={(tab) => {
         if (tab.id === "cyan") {
