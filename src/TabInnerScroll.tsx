@@ -65,6 +65,7 @@ function TabInnerScrollInner<T extends ElementType = "div">(
   const Component = (as ?? "div") as ElementType;
   const context = useContext(TabsContext);
   const ref = useRef<HTMLElement | null>(null);
+  const prevTouchActionRef = useRef<string | null>(null);
   const rawId = useId();
   const id = useMemo(() => rawId.replace(/:/g, "_"), [rawId]);
 
@@ -76,7 +77,25 @@ function TabInnerScrollInner<T extends ElementType = "div">(
       id,
       name: __test_name ?? `InnerScroll_${id}`,
       layer: context.layer,
+      direction,
       getElement: () => ref.current,
+      setGestureLock(locked, axis) {
+        const element = ref.current;
+        if (!element) {
+          return;
+        }
+        if (!locked || !axis) {
+          if (prevTouchActionRef.current !== null) {
+            element.style.touchAction = prevTouchActionRef.current;
+            prevTouchActionRef.current = null;
+          }
+          return;
+        }
+        if (prevTouchActionRef.current === null) {
+          prevTouchActionRef.current = element.style.touchAction ?? "";
+        }
+        element.style.touchAction = axis === "horizontal" ? "pan-y" : "pan-x";
+      },
       shouldAllowParentSwipe(dx, dy) {
         if (stopPropagation) return false;
         const element = ref.current;
@@ -124,6 +143,11 @@ function TabInnerScrollInner<T extends ElementType = "div">(
       },
     });
     return () => {
+      const element = ref.current;
+      if (element && prevTouchActionRef.current !== null) {
+        element.style.touchAction = prevTouchActionRef.current;
+        prevTouchActionRef.current = null;
+      }
       gestureManager.unregisterInnerScroll(id);
     };
   }, [__test_name, context, direction, id, stopPropagation]);

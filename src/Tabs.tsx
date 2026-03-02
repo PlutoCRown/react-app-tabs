@@ -225,6 +225,8 @@ function TabsInner<T>(props: TabsProps<T>, ref: React.ForwardedRef<TabsRef>) {
         id,
         name: __test_name ?? `Tab(layer:${layer})`,
         layer,
+        axis: isHorizontalSwipe ? "horizontal" : "vertical",
+        preventScrollChain: true,
         canHandle: (dx, dy) => {
           const mainDelta = isHorizontalSwipe ? dx : dy;
           const crossDelta = isHorizontalSwipe ? dy : dx;

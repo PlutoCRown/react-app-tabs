@@ -6,6 +6,8 @@ type GestureCandidate = {
   id: string | number;
   name: string;
   layer: number;
+  axis: 'horizontal' | 'vertical';
+  preventScrollChain?: boolean;
   canHandle: (dx: number, dy: number) => GestureDecision;
   onStart?: () => void;
   onMove: (dx: number, dy: number, requestRepick: () => void) => void;
@@ -16,8 +18,10 @@ type RegisteredInnerScroll = {
   id: string;
   name: string;
   layer: number;
+  direction: 'horizontal' | 'vertical';
   getElement: () => HTMLElement | null;
   shouldAllowParentSwipe: (dx: number, dy: number) => boolean;
+  setGestureLock?: (locked: boolean, axis: 'horizontal' | 'vertical' | null) => void;
 };
 
 type GestureSession = {
@@ -49,6 +53,33 @@ function getOwnerCandidate() {
   return session.candidates.get(session.ownerId) ?? null;
 }
 
+function isInnerCandidateId(id: string | number) {
+  return typeof id === 'string' && id.startsWith('inner:');
+}
+
+function getInnerScrollIdFromCandidateId(id: string | number) {
+  if (!isInnerCandidateId(id)) {
+    return null;
+  }
+  return String(id).slice('inner:'.length);
+}
+
+function updateInnerScrollLock(owner: GestureCandidate | null) {
+  if (!session) {
+    return;
+  }
+
+  const lockAxis = owner?.preventScrollChain ? owner.axis : null;
+  for (const candidateId of session.candidates.keys()) {
+    const innerId = getInnerScrollIdFromCandidateId(candidateId);
+    if (!innerId) {
+      continue;
+    }
+    const entry = innerScrollRegistry.get(innerId);
+    entry?.setGestureLock?.(lockAxis !== null, lockAxis);
+  }
+}
+
 function registerInnerScrollCandidatesForTarget(target: Element | null) {
   if (!session || !target) {
     return;
@@ -67,6 +98,7 @@ function registerInnerScrollCandidatesForTarget(target: Element | null) {
               id: candidateId,
               name: entry.name,
               layer: entry.layer + 0.5,
+              axis: entry.direction,
               canHandle: (dx, dy) => {
                 const allowParent = entry.shouldAllowParentSwipe(dx, dy);
                 if (allowParent) {
@@ -123,18 +155,20 @@ function assignOwner(nextOwner: GestureCandidate | null, dx: number, dy: number)
     session.ownerId = null;
     session.ownerBaseDx = 0;
     session.ownerBaseDy = 0;
+    updateInnerScrollLock(null);
     return;
   }
 
   session.ownerId = nextOwner.id;
   session.ownerBaseDx = dx;
   session.ownerBaseDy = dy;
+  updateInnerScrollLock(nextOwner);
   nextOwner.onStart?.();
 }
 
 function dispatchMove(point: { x: number; y: number }) {
   if (!session) {
-    return;
+    return false;
   }
 
   const now = Date.now();
@@ -163,7 +197,7 @@ function dispatchMove(point: { x: number; y: number }) {
 
   const owner = getOwnerCandidate();
   if (!owner) {
-    return;
+    return false;
   }
 
   owner.onMove(dx - session.ownerBaseDx, dy - session.ownerBaseDy, () => {
@@ -172,6 +206,7 @@ function dispatchMove(point: { x: number; y: number }) {
     }
     session.repickRequested = true;
   });
+  return !!owner.preventScrollChain;
 }
 
 function dispatchEnd() {
@@ -193,6 +228,7 @@ function dispatchEnd() {
   if (owner) {
     owner.onEnd(dx - session.ownerBaseDx, dy - session.ownerBaseDy, dvx, dvy);
   }
+  updateInnerScrollLock(null);
 
   session = null;
 }
@@ -221,7 +257,14 @@ export const gestureManager = {
       if (!point) {
         return;
       }
-      dispatchMove(point);
+      const shouldPreventDefault = dispatchMove(point);
+      if (
+        shouldPreventDefault &&
+        event.type === 'touchmove' &&
+        event.cancelable
+      ) {
+        event.preventDefault();
+      }
     };
 
     const handleEnd = () => {
@@ -229,7 +272,7 @@ export const gestureManager = {
     };
 
     document.addEventListener('mousemove', handleMove);
-    document.addEventListener('touchmove', handleMove, { passive: true });
+    document.addEventListener('touchmove', handleMove, { passive: false });
     document.addEventListener('mouseup', handleEnd);
     document.addEventListener('touchend', handleEnd);
     document.addEventListener('touchcancel', handleEnd);
