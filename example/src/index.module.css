@@ -155,6 +155,10 @@
   overflow-y: auto;
 }
 
+.dirPanelScroll::-webkit-scrollbar {
+  display: none;
+}
+
 .dirPanelInner {
   padding-inline: 1.5em;
   gap: 20px;

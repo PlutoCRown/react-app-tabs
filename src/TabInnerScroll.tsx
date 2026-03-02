@@ -25,9 +25,9 @@ export type TabInnerScrollProps<T extends ElementType = "div"> =
   TabInnerScrollOwnProps & {
     as?: T;
   } & Omit<
-      React.ComponentPropsWithoutRef<T>,
-      keyof TabInnerScrollOwnProps | "as"
-    >;
+    React.ComponentPropsWithoutRef<T>,
+    keyof TabInnerScrollOwnProps | "as"
+  >;
 
 type TabInnerScrollComponent = <T extends ElementType = "div">(
   props: TabInnerScrollProps<T> & {
@@ -65,7 +65,17 @@ function TabInnerScrollInner<T extends ElementType = "div">(
   const Component = (as ?? "div") as ElementType;
   const context = useContext(TabsContext);
   const ref = useRef<HTMLElement | null>(null);
-  const prevTouchActionRef = useRef<string | null>(null);
+  const prevStateRef = useRef<{
+    touchAction: string | null;
+    overflowX: string | null;
+    overflowY: string | null;
+    webkitOverflowScrolling: string | null;
+  }>({
+    touchAction: null,
+    overflowX: null,
+    overflowY: null,
+    webkitOverflowScrolling: null,
+  });
   const rawId = useId();
   const id = useMemo(() => rawId.replace(/:/g, "_"), [rawId]);
 
@@ -81,20 +91,39 @@ function TabInnerScrollInner<T extends ElementType = "div">(
       getElement: () => ref.current,
       setGestureLock(locked, axis) {
         const element = ref.current;
+        const prev = prevStateRef.current;
         if (!element) {
           return;
         }
+
+        const restoreElementStyle = () => {
+          const restoreKeys = ['touchAction', 'overflowX', 'overflowY', 'webkitOverflowScrolling'] as const
+          restoreKeys.forEach(key => {
+            if (prev[key] !== null) {
+              element.style[key as any] = prev[key];
+              prev[key] = null;
+            }
+          })
+        };
+
         if (!locked || !axis) {
-          if (prevTouchActionRef.current !== null) {
-            element.style.touchAction = prevTouchActionRef.current;
-            prevTouchActionRef.current = null;
-          }
+          restoreElementStyle();
           return;
         }
-        if (prevTouchActionRef.current === null) {
-          prevTouchActionRef.current = element.style.touchAction ?? "";
+        if (prev.touchAction === null) {
+          prev.touchAction = element.style.touchAction ?? "";
         }
         element.style.touchAction = axis === "horizontal" ? "pan-y" : "pan-x";
+        if (prev.webkitOverflowScrolling === null) {
+          prev.webkitOverflowScrolling =
+            element.style.getPropertyValue("-webkit-overflow-scrolling") ?? "";
+        }
+        element.style.setProperty("-webkit-overflow-scrolling", "auto");
+        const overflowDir = axis === "horizontal" ? 'overflowX' : 'overflowY'
+        if (prev[overflowDir] === null) {
+          prev[overflowDir] = element.style[overflowDir] ?? "";
+        }
+        element.style[overflowDir] = "hidden";
       },
       shouldAllowParentSwipe(dx, dy) {
         if (stopPropagation) return false;
@@ -144,9 +173,25 @@ function TabInnerScrollInner<T extends ElementType = "div">(
     });
     return () => {
       const element = ref.current;
-      if (element && prevTouchActionRef.current !== null) {
-        element.style.touchAction = prevTouchActionRef.current;
-        prevTouchActionRef.current = null;
+      const prev = prevStateRef.current;
+      if (element && prev.touchAction !== null) {
+        element.style.touchAction = prev.touchAction;
+        prev.touchAction = null;
+      }
+      if (element && prev.overflowX !== null) {
+        element.style.overflowX = prev.overflowX;
+        prev.overflowX = null;
+      }
+      if (element && prev.overflowY !== null) {
+        element.style.overflowY = prev.overflowY;
+        prev.overflowY = null;
+      }
+      if (element && prev.webkitOverflowScrolling !== null) {
+        element.style.setProperty(
+          "-webkit-overflow-scrolling",
+          prev.webkitOverflowScrolling,
+        );
+        prev.webkitOverflowScrolling = null;
       }
       gestureManager.unregisterInnerScroll(id);
     };
@@ -168,17 +213,17 @@ function TabInnerScrollInner<T extends ElementType = "div">(
   const managedStyle: CSSProperties =
     direction === "horizontal"
       ? {
-          overflowX: "auto",
-          overflowY: "hidden",
-          WebkitOverflowScrolling: "touch",
-          ...style,
-        }
+        overflowX: "auto",
+        overflowY: "hidden",
+        WebkitOverflowScrolling: "touch",
+        ...style,
+      }
       : {
-          overflowY: "auto",
-          overflowX: "hidden",
-          WebkitOverflowScrolling: "touch",
-          ...style,
-        };
+        overflowY: "auto",
+        overflowX: "hidden",
+        WebkitOverflowScrolling: "touch",
+        ...style,
+      };
   return (
     <Component
       ref={(node: unknown) => {
