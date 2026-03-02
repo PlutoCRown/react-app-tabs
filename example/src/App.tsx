@@ -107,14 +107,9 @@ const SecondLevelBar = (meta: TabBarRenderMeta<ColorTab>) => {
   }, [activeIndex]);
 
   useEffect(() => {
-    callback.onSwipe((progress) => {
-      console.log(progress);
-      applyUnderline(progress, false);
-    });
-    callback.onChange((active) => {
-      console.log("过度到", active);
-      applyUnderline(active, true);
-    });
+    // 这里如果能实现animatedValue那种东西就好了
+    callback.onSwipe((progress) => applyUnderline(progress, false));
+    callback.onChange((active) => applyUnderline(active, true));
     return callback.clear;
   }, []);
 
