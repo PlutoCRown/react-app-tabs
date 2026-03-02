@@ -17,12 +17,16 @@ function docPanelStyle(color: string) {
 }
 
 function InlineCode({ children }: { children: React.ReactNode }) {
-  return <span className={styles.cyanInlineCode}>{children}</span>;
+  return <code className={styles.cyanInlineCode}>{children}</code>;
 }
 
 function CodeSnippet({ text }: { text: string }) {
   return (
-    <TabInnerScroll direction="horizontal" className={styles.cyanCodeBlock}>
+    <TabInnerScroll
+      direction="horizontal"
+      className={styles.cyanCodeBlock}
+      as="pre"
+    >
       {text}
     </TabInnerScroll>
   );
