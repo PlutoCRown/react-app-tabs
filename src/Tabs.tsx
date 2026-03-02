@@ -123,7 +123,6 @@ function TabsInner<T>(props: TabsProps<T>, ref: React.ForwardedRef<TabsRef>) {
       shouldTriggerAfterChange: boolean,
       transitionDuration: number,
     ) => {
-      console.log("触发");
       dragOffsetRef.current = 0;
       setCurrentIndex(targetIndex);
       if (transitionDuration <= 0) {

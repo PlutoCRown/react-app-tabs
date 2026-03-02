@@ -96,20 +96,6 @@
   color: #16324f;
 }
 
-.cyanPoints {
-  margin: 0;
-  padding-left: 18px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.cyanPoint {
-  font-size: 14px;
-  line-height: 1.35;
-  color: #1f2f46;
-}
-
 .cyanParagraph {
   margin: 0;
   font-size: 14px;
@@ -141,7 +127,21 @@
   color: #153252;
   font-size: 12px;
   line-height: 1.5;
-  overflow-x: auto;
+  white-space: pre;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+}
+
+.cyanInlineCode {
+  display: inline-block;
+  margin: 0 2px;
+  padding: 0 6px;
+  border: 1px solid #d6e3f4;
+  border-radius: 6px;
+  background: #f3f8ff;
+  color: #173a5c;
+  font-size: 12px;
+  line-height: 1.6;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
 }
 
 .cyanCodeLang {
@@ -173,14 +173,6 @@
   font-size: 13px;
   color: #2f4f71;
   line-height: 1.45;
-}
-
-.cyanOrderedList {
-  margin: 0;
-  padding-left: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
 }
 
 .thirdLevelBar {
@@ -242,4 +234,121 @@
 .firstLevelBar {
   border-top: 1px solid #dce5f6;
   background: #fff;
+}
+
+.cyanHero {
+  background: linear-gradient(180deg, #ffffffde, #ffffffa8);
+  border: 1px solid #dce7f3;
+  border-radius: 16px;
+  padding: 12px 14px;
+}
+
+.cyanHeroMini {
+  background: linear-gradient(180deg, #ffffffcf, #ffffff9f);
+  border: 1px solid #dce7f3;
+  border-radius: 14px;
+  padding: 10px 12px;
+}
+
+.cyanKicker {
+  display: inline-flex;
+  margin-bottom: 8px;
+  padding: 3px 8px;
+  border: 1px solid #ccdaec;
+  border-radius: 999px;
+  background: #f6fbff;
+  font-size: 10px;
+  line-height: 1;
+  letter-spacing: 0.55px;
+  font-weight: 800;
+  color: #2b4869;
+}
+
+.cyanLead {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.55;
+  color: #1a2f49;
+}
+
+.cyanLeadMini {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #1a2f49;
+}
+
+.cyanStoryGrid {
+  display: grid;
+  gap: 8px;
+}
+
+.cyanStoryCard {
+  border: 1px solid #d6e3f4;
+  background: #f7fbff;
+  border-radius: 10px;
+  padding: 8px 10px;
+}
+
+.cyanStoryTitle {
+  margin: 0 0 4px;
+  font-size: 13px;
+  font-weight: 800;
+  color: #173756;
+}
+
+.cyanQuote {
+  margin-top: 2px;
+  border-left: 3px solid #7da7d4;
+  background: #f5faff;
+  border-radius: 10px;
+  padding: 8px 10px;
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.cyanQuoteMark {
+  font-size: 24px;
+  line-height: 1;
+  color: #6f98c4;
+}
+
+.cyanQuoteText {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: #24415f;
+}
+
+.cyanPropGrid {
+  display: grid;
+  gap: 8px;
+}
+
+.cyanPropItem {
+  border: 1px solid #d6e3f4;
+  border-radius: 10px;
+  padding: 8px 10px;
+  background: #f8fbff;
+}
+
+.cyanPropKey {
+  margin-bottom: 4px;
+  font-size: 12px;
+  line-height: 1;
+  font-weight: 800;
+  color: #18395a;
+  letter-spacing: 0.25px;
+}
+
+.cyanAnchor {
+  display: inline-block;
+  margin-left: 6px;
+  color: #1f5f95;
+  text-underline-offset: 2px;
+}
+
+.cyanAnchor:hover {
+  color: #15446f;
 }
