@@ -25,9 +25,9 @@ export type TabInnerScrollProps<T extends ElementType = "div"> =
   TabInnerScrollOwnProps & {
     as?: T;
   } & Omit<
-    React.ComponentPropsWithoutRef<T>,
-    keyof TabInnerScrollOwnProps | "as"
-  >;
+      React.ComponentPropsWithoutRef<T>,
+      keyof TabInnerScrollOwnProps | "as"
+    >;
 
 type TabInnerScrollComponent = <T extends ElementType = "div">(
   props: TabInnerScrollProps<T> & {
@@ -146,14 +146,12 @@ function TabInnerScrollInner<T extends ElementType = "div">(
       ? {
           overflowX: "auto",
           overflowY: "hidden",
-          touchAction: "pan-x",
           WebkitOverflowScrolling: "touch",
           ...style,
         }
       : {
           overflowY: "auto",
           overflowX: "hidden",
-          touchAction: "pan-y",
           WebkitOverflowScrolling: "touch",
           ...style,
         };
