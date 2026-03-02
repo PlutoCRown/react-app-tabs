@@ -9,7 +9,7 @@ type GestureCandidate = {
   canHandle: (dx: number, dy: number) => GestureDecision;
   onStart?: () => void;
   onMove: (dx: number, dy: number, requestRepick: () => void) => void;
-  onEnd: (dx: number, dy: number) => void;
+  onEnd: (dx: number, dy: number, dvx: number, dvy: number) => void;
 };
 
 type RegisteredInnerScroll = {
@@ -25,6 +25,11 @@ type GestureSession = {
   startY: number;
   currentX: number;
   currentY: number;
+  startAt: number;
+  currentAt: number;
+  lastSampleX: number;
+  lastSampleY: number;
+  lastSampleAt: number;
   startTarget: Element | null;
   candidates: Map<string | number, GestureCandidate>;
   ownerId: string | number | null;
@@ -132,8 +137,13 @@ function dispatchMove(point: { x: number; y: number }) {
     return;
   }
 
+  const now = Date.now();
+  session.lastSampleX = session.currentX;
+  session.lastSampleY = session.currentY;
+  session.lastSampleAt = session.currentAt;
   session.currentX = point.x;
   session.currentY = point.y;
+  session.currentAt = now;
 
   const dx = point.x - session.startX;
   const dy = point.y - session.startY;
@@ -170,9 +180,17 @@ function dispatchEnd() {
 
   const dx = session.currentX - session.startX;
   const dy = session.currentY - session.startY;
+  const dt = Math.max(1, session.currentAt - session.lastSampleAt);
+  let dvx = (session.currentX - session.lastSampleX) / dt;
+  let dvy = (session.currentY - session.lastSampleY) / dt;
+  if (session.currentAt === session.lastSampleAt) {
+    const totalDt = Math.max(1, session.currentAt - session.startAt);
+    dvx = (session.currentX - session.startX) / totalDt;
+    dvy = (session.currentY - session.startY) / totalDt;
+  }
   const owner = getOwnerCandidate();
   if (owner) {
-    owner.onEnd(dx - session.ownerBaseDx, dy - session.ownerBaseDy);
+    owner.onEnd(dx - session.ownerBaseDx, dy - session.ownerBaseDy, dvx, dvy);
   }
 
   session = null;
@@ -224,11 +242,17 @@ export const gestureManager = {
     }
 
     if (!session) {
+      const now = Date.now();
       session = {
         startX: point.x,
         startY: point.y,
         currentX: point.x,
         currentY: point.y,
+        startAt: now,
+        currentAt: now,
+        lastSampleX: point.x,
+        lastSampleY: point.y,
+        lastSampleAt: now,
         startTarget: event.target instanceof Element ? event.target : null,
         candidates: new Map(),
         ownerId: null,

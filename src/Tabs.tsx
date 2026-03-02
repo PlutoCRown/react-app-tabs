@@ -44,7 +44,7 @@ function TabsInner<T>(props: TabsProps<T>, ref: React.ForwardedRef<TabsRef>) {
     swipable = true,
     fit = "container",
     direction = "bottom",
-    lazyLoadDistance = 1,
+    lazyLoadDistance = 3,
     duration = 300,
     TabBarRenderer,
   } = props;
@@ -238,20 +238,21 @@ function TabsInner<T>(props: TabsProps<T>, ref: React.ForwardedRef<TabsRef>) {
           setDragOffset(dx * 0.35);
           setPreviewBarIndex(currentIndex);
         },
-        onEnd: (dx) => {
+        onEnd: (dx, _dy, dvx) => {
           activeGestureId.current = null;
           const shouldNotifySettle = movedOnceRef.current;
           movedOnceRef.current = false;
           repickSentRef.current = false;
           const containerWidth = containerRef.current?.clientWidth ?? 0;
           const threshold = Math.max(28, containerWidth * 0.2);
-          if (dx > threshold) {
+          const mixedDx = dx + dvx * 280;
+          if (mixedDx > threshold) {
             if (!commitIndex(currentIndex - 1)) {
               startAnimation(currentIndex, shouldNotifySettle);
             }
             return;
           }
-          if (dx < -threshold) {
+          if (mixedDx < -threshold) {
             if (!commitIndex(currentIndex + 1)) {
               startAnimation(currentIndex, shouldNotifySettle);
             }

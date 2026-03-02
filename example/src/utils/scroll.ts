@@ -5,7 +5,7 @@ export function ensureItemVisible(container: HTMLDivElement | null, item: HTMLEl
 
   const containerRect = container.getBoundingClientRect();
   const itemRect = item.getBoundingClientRect();
-  const epsilon = 1;
+  const epsilon = 20;
   const fullyVisible =
     itemRect.left >= containerRect.left + epsilon &&
     itemRect.right <= containerRect.right - epsilon;
@@ -14,13 +14,13 @@ export function ensureItemVisible(container: HTMLDivElement | null, item: HTMLEl
   }
 
   if (itemRect.left < containerRect.left) {
-    const delta = itemRect.left - containerRect.left;
+    const delta = itemRect.left - containerRect.left - epsilon;
     container.scrollTo({ left: container.scrollLeft + delta, behavior: 'smooth' });
     return;
   }
 
   if (itemRect.right > containerRect.right) {
-    const delta = itemRect.right - containerRect.right;
+    const delta = itemRect.right - containerRect.right + epsilon;
     container.scrollTo({ left: container.scrollLeft + delta, behavior: 'smooth' });
   }
 }
