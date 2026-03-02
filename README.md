@@ -1,141 +1,50 @@
 # react-app-tabs
 
-移动端优先的 0 样式 Tabs 组件，支持：
-- 完全自定义 `TabBar` / `Panel` 渲染
-- 嵌套 Tabs 手势优先级管理（内层优先）
-- 受控 / 非受控两种模式
-- `lazyLoadDistance` 按距离懒渲染 Panel
+`react-app-tabs` 是一个面向移动端交互场景的 Tabs 内核。
 
-## 安装
+它不是一套视觉组件库，而是一套“手势行为层”：你可以完全自定义 TabBar 和面板内容，但仍然获得稳定、可预期的多层滑动交互。
 
-```bash
-bun add react-app-tabs
-```
+## 在线示例
+https://plutocrown.github.io/react-app-tabs/
+> 推荐移动端访问
 
-> `react` / `react-dom` 为 peerDependencies，需要由使用方项目提供。
+## 这个项目解决什么问题
 
-## 用法
+在真实 App 中，Tabs 往往不是单层结构：
+- 外层是页面级切换
+- 内层是模块级切换
+- 面板中还可能有横向或纵向滚动容器
 
-```tsx
-import { Tabs } from 'react-app-tabs';
+这时最常见的问题是“手势冲突”：
+- 横向拖动到底是谁接管（外层 Tabs、内层 Tabs、还是内部滚动容器）
+- 到边界时是否要把控制权交给父层
+- 手势中途方向变化时，是否能平滑重选响应者
 
-type Item = { id: string; name: string };
+`react-app-tabs` 的目标就是把这些行为统一处理掉。
 
-const tabs: Item[] = [
-  { id: 'a', name: 'A' },
-  { id: 'b', name: 'B' },
-  { id: 'c', name: 'C' },
-];
+## 核心能力
 
-export function Demo() {
-  return (
-    <Tabs
-      tabs={tabs}
-      keyExtractor={(tab) => tab.id}
-      TabBarItemRenderer={(tab, { onClick, active }) => (
-        <button
-          type="button"
-          onClick={onClick}
-          style={{ opacity: active ? 1 : 0.6 }}
-        >
-          {tab.name}
-        </button>
-      )}
-      TabPanelRenderer={(tab) => <div>{tab.name} panel</div>}
-      direction="bottom"
-      fit="container"
-      swipable
-      defaultIndex={0}
-      lazyLoadDistance={3}
-    />
-  );
-}
-```
+### 1) 跨层滑动优先级管理
 
-## API
+组件会维护层级上下文，在同一次手势中按层级与可处理性决策“当前 owner”。
 
-```tsx
-type TabItem<T> = T;
-type Key = string | number;
-type TabBarItemRenderMeta = {
-  onClick: () => void;
-  active: boolean;
-  index: number;
-};
+结果是：
+- 更深层的可处理目标优先
+- 当前层无法继续处理时可向上交接
+- 多层嵌套时交互行为一致，不靠业务侧手写抢占逻辑
 
-type TabBarRenderItem<T> = {
-  tab: TabItem<T>;
-  key: Key;
-  index: number;
-  active: boolean;
-  onClick: () => void;
-};
+### 2) 兼容内部滚动容器
 
-type TabBarRenderMeta<T> = {
-  items: TabBarRenderItem<T>[];
-  activeIndex: number;
-  swipeProgress: number;
-  direction: 'bottom' | 'left' | 'right' | 'top';
-  fit: 'container' | 'content';
-  onSwipe?: (progress: number) => void;
-  onChange?: (activeIndex: number) => void;
-};
+在 Tab 面板里有原生滚动容器（横向或纵向）时，组件会先判断容器是否还能继续滚动：
+- 能滚动：优先滚动容器
+- 到边界：允许把手势交给外层 Tabs
 
-type Props<T> = {
-  tabs: TabItem<T>[];
-  keyExtractor: (tab: TabItem<T>) => Key;
-  TabPanelRenderer: (tab: TabItem<T>) => React.ReactNode;
+这让“内容滚动”和“页面切换”可以自然衔接，减少误触和卡顿感。
 
-  onSwipe?: (progress: number) => void;
-  onChange?: (nextIndex: number, prevIndex: number) => undefined | boolean;
-  onAfterChange?: (activeIndex: number) => void;
+## 定位
 
-  defaultIndex?: number;
-  activeIndex?: number;
+- 移动端优先
+- 无样式内核（不绑定设计语言）
+- 面向嵌套复杂度，而非仅单层 Tabs 切换
 
-  swipable?: boolean;
-  fit?: 'container' | 'content';
-  direction?: 'bottom' | 'left' | 'right' | 'top';
-  lazyLoadDistance?: number;
-  duration?: number;
-  switchDuration?: number;
-} & (
-  | {
-      TabBarItemRenderer: (
-        tab: TabItem<T>,
-        meta: TabBarItemRenderMeta
-      ) => React.ReactNode;
-      TabBarClassName?: string;
-      TabBarStyle?: CSSProperties;
-      TabBarRenderer?: never;
-    }
-  | {
-      TabBarRenderer: (meta: TabBarRenderMeta<T>) => React.ReactNode;
-      TabBarItemRenderer?: never;
-      TabBarClassName?: never;
-      TabBarStyle?: never;
-    }
-);
-```
-
-## 嵌套手势说明
-
-组件内部维护一个上下文层级 `layer`。当嵌套 Tabs 同时收到 `down` 事件时，会以层级更深的 Tabs 作为当前手势响应者，外层将被忽略，从而优先响应子 Panel 的 swipe。
-
-`move` 事件统一挂在 `document`，全局只有一组监听器。拖动中会通过 `transform` 实时预览相邻 Panel，松手后使用 `transition` 平滑吸附，默认时长 `duration=300ms`，并在过渡结束后触发 `onAfterChange`。
-
-## 本地开发
-
-```bash
-bun install
-bun run example
-```
-
-## 示例
-
-`example/` 提供了三层嵌套案例：
-1. 第一层（底部）：`Blue / Red / Green / Yellow`
-2. `Blue` Panel 内第二层（顶部）：`Sky / Cyan / Purple`，默认选中 `Cyan`
-3. `Cyan` Panel 内第三层（顶部）：10 个随机 Tab
-
-其余未特殊处理的 Panel 都渲染居中径向渐变背景。
+如果你的场景重点是“多层 Tabs + 内部滚动 + 手势冲突治理”，这个项目就是为此设计的。
