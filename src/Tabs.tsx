@@ -34,6 +34,8 @@ export { useReactAppTabsContext };
 function TabsInner<T>(props: TabsProps<T>, ref: React.ForwardedRef<TabsRef>) {
   const {
     __test_name,
+    className,
+    style,
     tabs,
     keyExtractor,
     TabPanelRenderer,
@@ -449,7 +451,10 @@ function TabsInner<T>(props: TabsProps<T>, ref: React.ForwardedRef<TabsRef>) {
 
   return (
     <TabsContext.Provider value={contextValue}>
-      <div className={styles.root} style={calcStyle.root}>
+      <div
+        className={joinClassNames(styles.root, className)}
+        style={{ ...calcStyle.root, ...style }}
+      >
         {TabBarRenderer ? (
           TabBarRenderer({
             items: tabBarItems,

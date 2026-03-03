@@ -36,6 +36,7 @@ const TestSnapTabs = () => {
           }
           return gradientPanel(tab.color, tab.name);
         }}
+        style={{ gap: 12 }}
         TabBarClassName={styles.firstLevelBar}
         TabBarStyle={{ borderRadius: 18, padding: "0.4em", gap: 6 }}
         TabBarItemRenderer={TestTabBarItem}
@@ -50,13 +51,11 @@ const InnerLayerH = () => {
   return (
     <section className={styles.dirSection} style={{ height: "100%" }}>
       <SnapTabs
-        tabs={new Array(8)
-          .fill(0)
-          .map((_, i) => ({
-            id: i,
-            name: `Panel_${i}`,
-            color: `hsl(${190 + i * 16} 86% 84%)`,
-          }))}
+        tabs={new Array(8).fill(0).map((_, i) => ({
+          id: i,
+          name: `Panel_${i}`,
+          color: `hsl(${190 + i * 16} 86% 84%)`,
+        }))}
         keyExtractor={(i) => i.id}
         switchDuration={300}
         TabBarItemRenderer={(tab, meta) => (

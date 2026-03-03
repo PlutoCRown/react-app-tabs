@@ -37,6 +37,8 @@ export type TabBarRenderMeta<T> = {
 
 export type TabsBaseProps<T> = {
   __test_name?: string;
+  className?: string;
+  style?: CSSProperties;
   tabs: readonly TabItem<T>[];
   keyExtractor: (tab: TabItem<T>) => Key;
   TabPanelRenderer: (tab: TabItem<T>) => ReactNode;

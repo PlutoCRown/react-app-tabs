@@ -28,6 +28,8 @@ function SnapTabsInner<T>(
   ref: React.ForwardedRef<TabsRef>,
 ) {
   const {
+    className,
+    style,
     tabs,
     keyExtractor,
     TabPanelRenderer,
@@ -309,7 +311,10 @@ function SnapTabsInner<T>(
   );
 
   return (
-    <div className={styles.root} style={calcStyle.root}>
+    <div
+      className={joinClassNames(styles.root, className)}
+      style={{ ...calcStyle.root, ...style }}
+    >
       {TabBarRenderer ? (
         TabBarRenderer({
           items: tabBarItems,
