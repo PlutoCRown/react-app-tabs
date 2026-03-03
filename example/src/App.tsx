@@ -9,7 +9,7 @@ import { ensureItemVisible } from "./utils/scroll";
 import styles from "./index.module.css";
 import TestSnapTabs from "./components/snap";
 
-function getUnderlineStyle(
+export function getUnderlineStyle(
   refs: Array<HTMLButtonElement | null>,
   progress: number,
 ): { transform: string; width: number } | null {
