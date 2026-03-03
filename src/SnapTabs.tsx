@@ -24,9 +24,10 @@ import {
   joinClassNames,
 } from "./utils";
 
-type SnapTabsProps<T> = TabsProps<T> & {
+type SnapTabsProps<T> = Omit<TabsProps<T>, "onChange"> & {
   snapStop?: boolean;
   clickAnimate?: boolean;
+  onChange?: (activeIndex: number) => void;
 };
 
 function SnapTabsInner<T>(
@@ -118,16 +119,6 @@ function SnapTabsInner<T>(
     return Math.min(tabs.length - 1, Math.max(0, raw));
   }, [getPanelSize, getScrollPos, tabs.length]);
 
-  const applyActiveIndex = useCallback(
-    (nextIndex: number, prevIndex: number) => {
-      currentIndexRef.current = nextIndex;
-      setCurrentIndex(nextIndex);
-      tabBarCallbackRef.current.onChange?.(nextIndex);
-      onChange?.(nextIndex, prevIndex);
-    },
-    [onChange],
-  );
-
   const handleScrollSettled = useCallback(() => {
     const next = clampIndex(Math.round(getScrollProgress()), tabs.length);
     if (next !== settledIndexRef.current) {
@@ -144,15 +135,13 @@ function SnapTabsInner<T>(
 
     const next = clampIndex(Math.round(progress), tabs.length);
     const prev = currentIndexRef.current;
+
     if (next !== prev) {
-      const allowed = onChange?.(next, prev);
-      if (allowed === false) {
-        scrollToIndex(prev, false);
-      } else {
-        currentIndexRef.current = next;
-        setCurrentIndex(next);
-        tabBarCallbackRef.current.onChange?.(next);
-      }
+      console.log("handlePanelScroll", next, prev);
+      onChange?.(next);
+      currentIndexRef.current = next;
+      setCurrentIndex(next);
+      tabBarCallbackRef.current.onChange?.(next);
     }
 
     settleDebounced.run();
@@ -172,14 +161,8 @@ function SnapTabsInner<T>(
       if (normalizedNext === prevIndex) {
         return false;
       }
-      const allowed = onChange?.(normalizedNext, prevIndex);
-      if (allowed === false) {
-        scrollToIndex(prevIndex, false);
-        return false;
-      }
       currentIndexRef.current = normalizedNext;
       setCurrentIndex(normalizedNext);
-      tabBarCallbackRef.current.onChange?.(normalizedNext);
       scrollToIndex(normalizedNext, clickAnimate);
       settleDebounced.run();
       return true;
@@ -187,34 +170,11 @@ function SnapTabsInner<T>(
     [clickAnimate, onChange, scrollToIndex, settleDebounced, tabs.length],
   );
 
-  useEffect(() => {
-    if (tabs.length === 0) {
-      setCurrentIndex(0);
-      currentIndexRef.current = 0;
-      settledIndexRef.current = 0;
-      return;
-    }
-    if (!isControlled) {
-      return;
-    }
-    const next = clampIndex(activeIndex as number, tabs.length);
-    const prev = currentIndexRef.current;
-    if (next !== prev) {
-      applyActiveIndex(next, prev);
-    }
-    scrollToIndex(next, clickAnimate);
-  }, [activeIndex, applyActiveIndex, isControlled, scrollToIndex, tabs.length]);
-
   useLayoutEffect(() => {
     scrollToIndex(currentIndexRef.current, false);
   }, [direction, fit, scrollToIndex, tabs.length]);
 
-  useEffect(
-    () => () => {
-      settleDebounced.cancel();
-    },
-    [settleDebounced],
-  );
+  useEffect(() => () => settleDebounced.cancel(), [settleDebounced]);
 
   const calcStyle = useMemo(() => {
     const isVertical = direction === "top" || direction === "bottom";
@@ -272,9 +232,7 @@ function SnapTabsInner<T>(
     key: keyExtractor(tab),
     index,
     active: index === currentIndex,
-    onClick: () => {
-      commitIndex(index);
-    },
+    onClick: () => commitIndex(index),
   }));
 
   const tabBarCallbackApi = useMemo(
@@ -297,9 +255,7 @@ function SnapTabsInner<T>(
     ref,
     () => ({
       getActiveIndex: () => currentIndexRef.current,
-      setActiveIndex: (nextIndex: number) => {
-        commitIndex(nextIndex);
-      },
+      setActiveIndex: (nextIndex: number) => commitIndex(nextIndex),
     }),
     [commitIndex],
   );

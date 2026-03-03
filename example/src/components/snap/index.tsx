@@ -51,6 +51,7 @@ const TestSnapTabs = () => {
         clickAnimate
         onChange={(...args) => (console.log(args), true)}
         onAfterChange={console.log}
+        defaultIndex={1}
       />
     </TabInnerScroll>
   );
