@@ -69,15 +69,9 @@ function SnapTabsInner<T>(
     onChange?: (activeIndex: number) => void;
   }>({});
 
-  useEffect(() => {
-    currentIndexRef.current = currentIndex;
-  }, [currentIndex]);
-
   const getScrollPos = useCallback(() => {
     const el = panelContainerRef.current;
-    if (!el) {
-      return 0;
-    }
+    if (!el) return 0;
     return isHorizontal ? el.scrollLeft : el.scrollTop;
   }, [isHorizontal]);
 
@@ -137,7 +131,6 @@ function SnapTabsInner<T>(
     const prev = currentIndexRef.current;
 
     if (next !== prev) {
-      console.log("handlePanelScroll", next, prev);
       onChange?.(next);
       currentIndexRef.current = next;
       setCurrentIndex(next);
@@ -161,7 +154,6 @@ function SnapTabsInner<T>(
       if (normalizedNext === prevIndex) {
         return false;
       }
-      currentIndexRef.current = normalizedNext;
       setCurrentIndex(normalizedNext);
       scrollToIndex(normalizedNext, clickAnimate);
       settleDebounced.run();
