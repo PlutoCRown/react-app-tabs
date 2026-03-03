@@ -23,10 +23,6 @@ import {
   joinClassNames,
 } from "./utils";
 
-function easeInOutCubic(t: number) {
-  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
-}
-
 function SnapTabsInner<T>(
   props: TabsProps<T>,
   ref: React.ForwardedRef<TabsRef>,
@@ -43,8 +39,6 @@ function SnapTabsInner<T>(
     fit = "container",
     direction = "bottom",
     lazyLoadDistance = 3,
-    duration = 300,
-    switchDuration = 0,
     TabBarRenderer,
     TabBarStyle = {},
   } = props;
@@ -57,10 +51,9 @@ function SnapTabsInner<T>(
   );
 
   const panelContainerRef = useRef<HTMLDivElement | null>(null);
-  const animationFrameRef = useRef<number | null>(null);
   const settleTimerRef = useRef<number | null>(null);
-  const programmaticScrollRef = useRef(false);
   const currentIndexRef = useRef(currentIndex);
+  const settledIndexRef = useRef(currentIndex);
   const tabBarCallbackRef = useRef<{
     onSwipe?: (progress: number) => void;
     onChange?: (activeIndex: number) => void;
@@ -69,13 +62,6 @@ function SnapTabsInner<T>(
   useEffect(() => {
     currentIndexRef.current = currentIndex;
   }, [currentIndex]);
-
-  const clearAnimation = useCallback(() => {
-    if (animationFrameRef.current !== null) {
-      cancelAnimationFrame(animationFrameRef.current);
-      animationFrameRef.current = null;
-    }
-  }, []);
 
   const clearSettleTimer = useCallback(() => {
     if (settleTimerRef.current !== null) {
@@ -92,198 +78,147 @@ function SnapTabsInner<T>(
     return isHorizontal ? el.scrollLeft : el.scrollTop;
   }, [isHorizontal]);
 
-  const setScrollPos = useCallback(
-    (value: number) => {
-      const el = panelContainerRef.current;
-      if (!el) {
-        return;
-      }
-      if (isHorizontal) {
-        el.scrollLeft = value;
-      } else {
-        el.scrollTop = value;
-      }
-    },
-    [isHorizontal],
-  );
+  const getPanelSize = useCallback(() => {
+    const el = panelContainerRef.current;
+    if (!el) return 0;
+    return isHorizontal ? el.clientWidth : el.clientHeight;
+  }, [isHorizontal]);
 
   const getPanelOffset = useCallback(
     (index: number) => {
       const el = panelContainerRef.current;
-      if (!el) {
-        return 0;
-      }
+      if (!el) return 0;
       const panel = el.children[index] as HTMLElement | undefined;
-      if (!panel) {
-        return 0;
-      }
+      if (!panel) return 0;
       return isHorizontal ? panel.offsetLeft : panel.offsetTop;
     },
     [isHorizontal],
   );
 
+  const scrollToIndex = useCallback(
+    (index: number) => {
+      const el = panelContainerRef.current;
+      if (!el) return;
+      const target = getPanelOffset(index);
+      const dir = isHorizontal ? "left" : "top";
+      el.scrollTo({ [dir]: target, behavior: "auto" });
+    },
+    [getPanelOffset, isHorizontal],
+  );
+
   const getScrollProgress = useCallback(() => {
-    const el = panelContainerRef.current;
-    if (!el || tabs.length <= 1) {
-      return 0;
-    }
-    const size = isHorizontal ? el.clientWidth : el.clientHeight;
-    if (size <= 0) {
+    const size = getPanelSize();
+    if (size <= 0 || tabs.length <= 1) {
       return currentIndexRef.current;
     }
     const raw = getScrollPos() / size;
     return Math.min(tabs.length - 1, Math.max(0, raw));
-  }, [getScrollPos, isHorizontal, tabs.length]);
+  }, [getPanelSize, getScrollPos, tabs.length]);
 
-  const notifySwipe = useCallback(() => {
-    const progress = getScrollProgress();
-    tabBarCallbackRef.current.onSwipe?.(progress);
-    onSwipe?.(progress);
-  }, [getScrollProgress, onSwipe]);
-
-  const scrollToIndex = useCallback(
-    (nextIndex: number, transitionDuration: number, onSettled?: () => void) => {
-      const target = getPanelOffset(nextIndex);
-      clearAnimation();
-
-      if (transitionDuration <= 0) {
-        setScrollPos(target);
-        onSettled?.();
-        return;
-      }
-
-      const start = getScrollPos();
-      const delta = target - start;
-      if (Math.abs(delta) < 1) {
-        setScrollPos(target);
-        onSettled?.();
-        return;
-      }
-
-      programmaticScrollRef.current = true;
-      const startTime = performance.now();
-
-      const step = (now: number) => {
-        const elapsed = now - startTime;
-        const progress = Math.min(1, elapsed / transitionDuration);
-        const eased = easeInOutCubic(progress);
-        setScrollPos(start + delta * eased);
-        notifySwipe();
-        if (progress < 1) {
-          animationFrameRef.current = requestAnimationFrame(step);
-          return;
-        }
-        setScrollPos(target);
-        programmaticScrollRef.current = false;
-        animationFrameRef.current = null;
-        onSettled?.();
-      };
-
-      animationFrameRef.current = requestAnimationFrame(step);
+  const applyActiveIndex = useCallback(
+    (nextIndex: number, prevIndex: number) => {
+      currentIndexRef.current = nextIndex;
+      setCurrentIndex(nextIndex);
+      tabBarCallbackRef.current.onChange?.(nextIndex);
+      onChange?.(nextIndex, prevIndex);
     },
-    [clearAnimation, getPanelOffset, getScrollPos, notifySwipe, setScrollPos],
-  );
-
-  const commitIndex = useCallback(
-    (nextIndex: number, trigger: "swipe" | "switch" = "swipe") => {
-      const transitionDuration =
-        trigger === "switch" ? switchDuration : duration;
-      const normalizedNext = clampIndex(nextIndex, tabs.length);
-      const prevIndex = currentIndexRef.current;
-
-      if (normalizedNext === prevIndex) {
-        return false;
-      }
-
-      const allowed = onChange?.(normalizedNext, prevIndex);
-      if (allowed === false) {
-        scrollToIndex(prevIndex, transitionDuration);
-        return false;
-      }
-
-      tabBarCallbackRef.current.onChange?.(normalizedNext);
-      if (!isControlled) {
-        setCurrentIndex(normalizedNext);
-      }
-      currentIndexRef.current = normalizedNext;
-      scrollToIndex(normalizedNext, transitionDuration, () => {
-        onAfterChange?.(normalizedNext);
-      });
-      return true;
-    },
-    [
-      duration,
-      isControlled,
-      onAfterChange,
-      onChange,
-      scrollToIndex,
-      switchDuration,
-      tabs.length,
-    ],
+    [onChange],
   );
 
   const handleScrollSettled = useCallback(() => {
-    if (programmaticScrollRef.current) {
-      return;
-    }
     const next = clampIndex(Math.round(getScrollProgress()), tabs.length);
+    if (next !== settledIndexRef.current) {
+      settledIndexRef.current = next;
+      onAfterChange?.(next);
+    }
+  }, [getScrollProgress, onAfterChange, tabs.length]);
+
+  const handlePanelScroll = useCallback(() => {
+    const progress = getScrollProgress();
+    tabBarCallbackRef.current.onSwipe?.(progress);
+    onSwipe?.(progress);
+
+    const next = clampIndex(Math.round(progress), tabs.length);
     const prev = currentIndexRef.current;
-    if (next === prev) {
-      tabBarCallbackRef.current.onChange?.(prev);
-      return;
+    if (next !== prev) {
+      const allowed = onChange?.(next, prev);
+      if (allowed === false) {
+        scrollToIndex(prev);
+      } else {
+        currentIndexRef.current = next;
+        setCurrentIndex(next);
+        tabBarCallbackRef.current.onChange?.(next);
+      }
     }
-    const allowed = onChange?.(next, prev);
-    if (allowed === false) {
-      scrollToIndex(prev, duration);
-      return;
-    }
-    tabBarCallbackRef.current.onChange?.(next);
-    if (!isControlled) {
-      setCurrentIndex(next);
-    }
-    currentIndexRef.current = next;
-    onAfterChange?.(next);
+
+    clearSettleTimer();
+    settleTimerRef.current = window.setTimeout(handleScrollSettled, 90);
   }, [
-    duration,
+    clearSettleTimer,
     getScrollProgress,
-    isControlled,
-    onAfterChange,
+    handleScrollSettled,
     onChange,
+    onSwipe,
     scrollToIndex,
     tabs.length,
   ]);
 
-  const handlePanelScroll = useCallback(() => {
-    notifySwipe();
-    clearSettleTimer();
-    settleTimerRef.current = window.setTimeout(handleScrollSettled, 90);
-  }, [clearSettleTimer, handleScrollSettled, notifySwipe]);
+  const commitIndex = useCallback(
+    (nextIndex: number) => {
+      const normalizedNext = clampIndex(nextIndex, tabs.length);
+      const prevIndex = currentIndexRef.current;
+      if (normalizedNext === prevIndex) {
+        return false;
+      }
+      const allowed = onChange?.(normalizedNext, prevIndex);
+      if (allowed === false) {
+        scrollToIndex(prevIndex);
+        return false;
+      }
+      currentIndexRef.current = normalizedNext;
+      setCurrentIndex(normalizedNext);
+      tabBarCallbackRef.current.onChange?.(normalizedNext);
+      scrollToIndex(normalizedNext);
+      clearSettleTimer();
+      settleTimerRef.current = window.setTimeout(handleScrollSettled, 90);
+      return true;
+    },
+    [
+      clearSettleTimer,
+      handleScrollSettled,
+      onChange,
+      scrollToIndex,
+      tabs.length,
+    ],
+  );
 
   useEffect(() => {
     if (tabs.length === 0) {
       setCurrentIndex(0);
       currentIndexRef.current = 0;
+      settledIndexRef.current = 0;
       return;
     }
     if (!isControlled) {
       return;
     }
     const next = clampIndex(activeIndex as number, tabs.length);
-    setCurrentIndex(next);
-    currentIndexRef.current = next;
-    scrollToIndex(next, switchDuration);
-  }, [activeIndex, isControlled, scrollToIndex, switchDuration, tabs.length]);
+    const prev = currentIndexRef.current;
+    if (next !== prev) {
+      applyActiveIndex(next, prev);
+    }
+    scrollToIndex(next);
+  }, [activeIndex, applyActiveIndex, isControlled, scrollToIndex, tabs.length]);
 
   useLayoutEffect(() => {
-    scrollToIndex(currentIndexRef.current, 0);
+    scrollToIndex(currentIndexRef.current);
   }, [direction, fit, scrollToIndex, tabs.length]);
 
   useEffect(
     () => () => {
-      clearAnimation();
       clearSettleTimer();
     },
-    [clearAnimation, clearSettleTimer],
+    [clearSettleTimer],
   );
 
   const calcStyle = useMemo(() => {
@@ -342,7 +277,7 @@ function SnapTabsInner<T>(
     index,
     active: index === currentIndex,
     onClick: () => {
-      commitIndex(index, "switch");
+      commitIndex(index);
     },
   }));
 
@@ -367,7 +302,7 @@ function SnapTabsInner<T>(
     () => ({
       getActiveIndex: () => currentIndexRef.current,
       setActiveIndex: (nextIndex: number) => {
-        commitIndex(nextIndex, "switch");
+        commitIndex(nextIndex);
       },
     }),
     [commitIndex],
@@ -381,7 +316,7 @@ function SnapTabsInner<T>(
           activeIndex: currentIndex,
           direction,
           fit,
-          duration,
+          duration: 0,
           callback: tabBarCallbackApi,
         })
       ) : (
