@@ -47,6 +47,10 @@ const TestSnapTabs = () => {
         TabBarClassName={styles.firstLevelBar}
         TabBarStyle={{ borderRadius: 18, padding: "0.4em", gap: 6 }}
         TabBarItemRenderer={TestTabBarItem}
+        snapStop
+        clickAnimate
+        onChange={(...args) => (console.log(args), true)}
+        onAfterChange={console.log}
       />
     </TabInnerScroll>
   );

@@ -16,6 +16,7 @@ import type {
   TabsRef,
   TabsWithDefaultBarProps,
 } from "./types";
+import { useDebounceFn } from "./hooks";
 import {
   clampIndex,
   getBarFlexDirection,
@@ -23,8 +24,13 @@ import {
   joinClassNames,
 } from "./utils";
 
+type SnapTabsProps<T> = TabsProps<T> & {
+  snapStop?: boolean;
+  clickAnimate?: boolean;
+};
+
 function SnapTabsInner<T>(
-  props: TabsProps<T>,
+  props: SnapTabsProps<T>,
   ref: React.ForwardedRef<TabsRef>,
 ) {
   const {
@@ -41,6 +47,8 @@ function SnapTabsInner<T>(
     fit = "container",
     direction = "bottom",
     lazyLoadDistance = 3,
+    snapStop = false,
+    clickAnimate = false,
     TabBarRenderer,
     TabBarStyle = {},
   } = props;
@@ -53,7 +61,6 @@ function SnapTabsInner<T>(
   );
 
   const panelContainerRef = useRef<HTMLDivElement | null>(null);
-  const settleTimerRef = useRef<number | null>(null);
   const currentIndexRef = useRef(currentIndex);
   const settledIndexRef = useRef(currentIndex);
   const tabBarCallbackRef = useRef<{
@@ -64,13 +71,6 @@ function SnapTabsInner<T>(
   useEffect(() => {
     currentIndexRef.current = currentIndex;
   }, [currentIndex]);
-
-  const clearSettleTimer = useCallback(() => {
-    if (settleTimerRef.current !== null) {
-      window.clearTimeout(settleTimerRef.current);
-      settleTimerRef.current = null;
-    }
-  }, []);
 
   const getScrollPos = useCallback(() => {
     const el = panelContainerRef.current;
@@ -98,14 +98,15 @@ function SnapTabsInner<T>(
   );
 
   const scrollToIndex = useCallback(
-    (index: number) => {
+    (index: number, animate = clickAnimate) => {
       const el = panelContainerRef.current;
       if (!el) return;
       const target = getPanelOffset(index);
       const dir = isHorizontal ? "left" : "top";
-      el.scrollTo({ [dir]: target, behavior: "auto" });
+      const behavior: ScrollBehavior = animate ? "smooth" : "instant";
+      el.scrollTo({ [dir]: target, behavior });
     },
-    [getPanelOffset, isHorizontal],
+    [clickAnimate, getPanelOffset, isHorizontal],
   );
 
   const getScrollProgress = useCallback(() => {
@@ -134,6 +135,7 @@ function SnapTabsInner<T>(
       onAfterChange?.(next);
     }
   }, [getScrollProgress, onAfterChange, tabs.length]);
+  const settleDebounced = useDebounceFn(handleScrollSettled, { wait: 90 });
 
   const handlePanelScroll = useCallback(() => {
     const progress = getScrollProgress();
@@ -145,7 +147,7 @@ function SnapTabsInner<T>(
     if (next !== prev) {
       const allowed = onChange?.(next, prev);
       if (allowed === false) {
-        scrollToIndex(prev);
+        scrollToIndex(prev, false);
       } else {
         currentIndexRef.current = next;
         setCurrentIndex(next);
@@ -153,15 +155,13 @@ function SnapTabsInner<T>(
       }
     }
 
-    clearSettleTimer();
-    settleTimerRef.current = window.setTimeout(handleScrollSettled, 90);
+    settleDebounced.run();
   }, [
-    clearSettleTimer,
     getScrollProgress,
-    handleScrollSettled,
     onChange,
     onSwipe,
     scrollToIndex,
+    settleDebounced,
     tabs.length,
   ]);
 
@@ -174,24 +174,17 @@ function SnapTabsInner<T>(
       }
       const allowed = onChange?.(normalizedNext, prevIndex);
       if (allowed === false) {
-        scrollToIndex(prevIndex);
+        scrollToIndex(prevIndex, false);
         return false;
       }
       currentIndexRef.current = normalizedNext;
       setCurrentIndex(normalizedNext);
       tabBarCallbackRef.current.onChange?.(normalizedNext);
-      scrollToIndex(normalizedNext);
-      clearSettleTimer();
-      settleTimerRef.current = window.setTimeout(handleScrollSettled, 90);
+      scrollToIndex(normalizedNext, clickAnimate);
+      settleDebounced.run();
       return true;
     },
-    [
-      clearSettleTimer,
-      handleScrollSettled,
-      onChange,
-      scrollToIndex,
-      tabs.length,
-    ],
+    [clickAnimate, onChange, scrollToIndex, settleDebounced, tabs.length],
   );
 
   useEffect(() => {
@@ -209,18 +202,18 @@ function SnapTabsInner<T>(
     if (next !== prev) {
       applyActiveIndex(next, prev);
     }
-    scrollToIndex(next);
+    scrollToIndex(next, clickAnimate);
   }, [activeIndex, applyActiveIndex, isControlled, scrollToIndex, tabs.length]);
 
   useLayoutEffect(() => {
-    scrollToIndex(currentIndexRef.current);
+    scrollToIndex(currentIndexRef.current, false);
   }, [direction, fit, scrollToIndex, tabs.length]);
 
   useEffect(
     () => () => {
-      clearSettleTimer();
+      settleDebounced.cancel();
     },
-    [clearSettleTimer],
+    [settleDebounced],
   );
 
   const calcStyle = useMemo(() => {
@@ -248,6 +241,7 @@ function SnapTabsInner<T>(
     const panelStyle = {
       ...fitContainer,
       scrollSnapAlign: "start",
+      scrollSnapStop: snapStop ? "always" : "normal",
       flex: fit === "container" ? "0 0 100%" : "0 0 auto",
       overflow: "auto",
     };
@@ -269,7 +263,7 @@ function SnapTabsInner<T>(
       panelScroll: panelScrollStyle as CSSProperties,
       panel: panelStyle as CSSProperties,
     };
-  }, [TabBarStyle, direction, fit, isHorizontal]);
+  }, [TabBarStyle, direction, fit, isHorizontal, snapStop]);
 
   const effectiveLazyDistance = Math.max(lazyLoadDistance, 1);
   const defaultBarProps = props as TabsWithDefaultBarProps<T>;
@@ -364,5 +358,5 @@ function SnapTabsInner<T>(
 }
 
 export const SnapTabs = forwardRef(SnapTabsInner) as <T>(
-  props: TabsProps<T> & { ref?: React.Ref<TabsRef> },
+  props: SnapTabsProps<T> & { ref?: React.Ref<TabsRef> },
 ) => React.ReactElement;
