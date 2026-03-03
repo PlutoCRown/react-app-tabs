@@ -7,6 +7,7 @@ import { defaultTabLabel, levelOneTabLabel } from "./components/tab-labels";
 import { TestTabs } from "./components/test-tabs";
 import { ensureItemVisible } from "./utils/scroll";
 import styles from "./index.module.css";
+import TestSnapTabs from "./components/snap";
 
 function getUnderlineStyle(
   refs: Array<HTMLButtonElement | null>,
@@ -185,7 +186,7 @@ function SecondLevelTabs() {
 }
 
 export function App() {
-  const [active, setActive] = React.useState(0);
+  const [active, setActive] = React.useState(3);
 
   return (
     <div className={styles.appRoot}>
@@ -207,6 +208,9 @@ export function App() {
           }
           if (tab.id === "red") {
             return <TestTabs />;
+          }
+          if (tab.id == "yellow") {
+            return <TestSnapTabs />;
           }
           return gradientPanel(tab.color, tab.name);
         }}

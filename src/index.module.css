@@ -21,3 +21,7 @@
 .panelItem {
   overflow: hidden;
 }
+
+.snapPanelContainer::-webkit-scrollbar {
+  display: none;
+}
