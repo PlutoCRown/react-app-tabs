@@ -12,10 +12,10 @@ import { ensureItemVisible } from "../../utils/scroll";
 import { getUnderlineStyle } from "../../App";
 
 const testTabs = [
-  { id: "sky", name: "Sky", color: "#55c3ff" },
+  { id: "sky", name: "SnapTab", color: "#55c3ff" },
   { id: "cyan", name: "Cyan", color: "#00d5d5" },
-  { id: "purple", name: "Purple", color: "#7a6bff" },
-  { id: "midnight", name: "Midnight", color: "#191970" },
+  { id: "purple", name: "Nested", color: "#7a6bff" },
+  { id: "midnight", name: "Scroller", color: "#191970" },
 ] as const;
 
 const TestSnapTabs = () => {

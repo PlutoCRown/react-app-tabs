@@ -186,7 +186,7 @@ function SecondLevelTabs() {
 }
 
 export function App() {
-  const [active, setActive] = React.useState(3);
+  const [active, setActive] = React.useState(0);
 
   return (
     <div className={styles.appRoot}>
