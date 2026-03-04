@@ -154,7 +154,9 @@ function ScrollerInPanel() {
           )}
           TabPanelRenderer={(tab) =>
             tab.id == "ocean" ? (
-              <Feed />
+              <TabInnerScroll direction="vertical" style={{ height: '100%' }}>
+                <Feed />
+              </TabInnerScroll>
             ) : (
               gradientPanel(tab.color, `${tab.name}`)
             )
